@@ -1,47 +1,70 @@
 // Push to talk. Hold V (or the mic button), say what you want, let go: the recording becomes the
 // WAV Muse Voice Transcribe wants (16 kHz, mono, 16-bit) and goes through the DJRepo server, which
 // holds the key, to Meta's Model API. It comes back as text. Shared by the show and the control deck.
+//
+// The microphone is open only while you hold the button. Left open, it counts as a call, and
+// Windows turns every other sound down while one is going.
 
 'use strict';
 
 const VOICE_RATE = 16000;
-const talk = { stream: null, recorder: null, chunks: [], started: 0 };
+const talk = { stream: null, recorder: null, chunks: [], started: 0, held: false };
 
+// Whether the button is held right now (even if the mic is still opening).
+function talkHeld() {
+  return talk.held;
+}
+
+// Press: open the mic and record. Resolves true once recording, or false if the button was let go
+// while the mic was still opening (then it's closed again straight away).
 async function talkStart() {
-  if (talk.recorder) return;
+  if (talk.held) return Boolean(talk.recorder);
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
     throw new Error("This browser can't record from a microphone.");
   }
-  if (!talk.stream) {
-    try {
-      talk.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    } catch {
-      throw new Error('Allow the microphone for this page to use voice commands.');
-    }
+  talk.held = true;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch {
+    talk.held = false;
+    throw new Error('Allow the microphone for this page to use voice commands.');
   }
+  if (!talk.held) {  // let go before the mic opened
+    closeMic(stream);
+    return false;
+  }
+  talk.stream = stream;
   talk.chunks = [];
-  talk.recorder = new MediaRecorder(talk.stream);
+  talk.recorder = new MediaRecorder(stream);
   talk.recorder.ondataavailable = (e) => {
     if (e.data.size) talk.chunks.push(e.data);
   };
   talk.recorder.start();
   talk.started = performance.now();
+  return true;
 }
 
-function talking() {
-  return Boolean(talk.recorder);
+function closeMic(stream) {
+  if (stream) for (const track of stream.getTracks()) track.stop();
 }
 
-// Stop recording and write it down. Resolves to the words ('' if it was too short to be speech).
+// Let go: stop, close the mic, and write it down. Resolves to the words, or '' if it was too short
+// to be speech (a tap rather than a hold).
 async function talkStop() {
+  if (!talk.held) return '';
+  talk.held = false;
   const recorder = talk.recorder;
-  if (!recorder) return '';
+  const stream = talk.stream;
   talk.recorder = null;
+  talk.stream = null;
+  if (!recorder) return '';  // the mic never opened; talkStart closes it if it does
   const stopped = new Promise((resolve) => {
     recorder.onstop = resolve;
   });
   recorder.stop();
   await stopped;
+  closeMic(stream);
   if (performance.now() - talk.started < 350) return '';
   const wav = await toVoiceWav(new Blob(talk.chunks, { type: recorder.mimeType }));
   const res = await fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: wav });

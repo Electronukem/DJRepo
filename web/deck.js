@@ -266,15 +266,18 @@ async function deckTalk(down) {
   const mic = $('#d-voice');
   try {
     if (down) {
-      if (!state || !state.playing || talking()) return;
-      await talkStart();
+      if (!state || !state.playing || talkHeld()) return;
       mic.classList.add('on');
-      showNotice('Listening… let go when you’re done');
-    } else if (talking()) {
+      showNotice('Opening the mic…');
+      if (await talkStart()) showNotice('Listening… hold V while you speak, then let go');
+    } else if (talkHeld()) {
       mic.classList.remove('on');
       showNotice('Muse Voice Transcribe is writing it down…');
       const text = await talkStop();
       if (text) send('voice', text);
+      else showNotice('Hold V while you speak, then let go.');
+    } else {
+      mic.classList.remove('on');
     }
   } catch (err) {
     mic.classList.remove('on');

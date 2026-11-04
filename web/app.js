@@ -2328,30 +2328,33 @@ function showHeard(state, text) {
 }
 
 async function voiceDown() {
-  if (!world || talking()) return;
+  if (!world || talkHeld()) return;
   if (DEMO) {
     showHeard('error', 'Voice commands need the DJRepo server: run it with docker compose up.');
     return;
   }
+  $('#voice').classList.add('on');
+  showHeard('listening', 'Opening the mic…');
   try {
-    await talkStart();
+    if (!(await talkStart())) return;  // let go before the mic was open: voiceUp has tidied up
     music.duck(true);
-    $('#voice').classList.add('on');
-    showHeard('listening', 'Listening… let go when you’re done');
+    showHeard('listening', 'Listening… hold V while you speak, then let go');
   } catch (err) {
+    $('#voice').classList.remove('on');
+    music.duck(false);
     showHeard('error', err.message);
   }
 }
 
 async function voiceUp() {
-  if (!talking()) return;
-  music.duck(false);
+  music.duck(false);  // always: letting go brings the music back, whatever state the mic is in
   $('#voice').classList.remove('on');
+  if (!talkHeld()) return;
   showHeard('thinking', 'Muse Voice Transcribe is writing it down…');
   try {
     const text = await talkStop();
     if (text) hearCommand(text);
-    else heardBox.hidden = true;
+    else showHeard('error', 'Hold V while you speak, then let go.');
   } catch (err) {
     showHeard('error', err.message);
   }
