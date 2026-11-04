@@ -41,8 +41,7 @@ async function openGigFinder() {
   $('#log').textContent = '';
   showScreen('progress');
   try {
-    const { job } = await postJSON('/api/build', { url, refresh: $('#refresh').checked });
-    const [scene] = await waitForJobs([job], [shortUrl(url)]);
+    const [scene] = await buildScenes([url], { refresh: $('#refresh').checked });
     if (gig.scene !== scene) gig.samples.clear();
     gig.scene = scene;
     gig.clips = sampleClips(scene);
@@ -60,13 +59,18 @@ async function openGigFinder() {
   }
 }
 
+const DEMO_GIGS = 'In this live demo there is no server, so it can\'t search Ticketmaster or ask Muse Spark. '
+  + 'Run DJRepo yourself (docker compose up, with your Ticketmaster and Meta keys in .env) to find real gigs and get pitches drafted.';
+
 function checkKeys() {
   const keys = (health && health.keys) || {};
   const lines = [];
-  if (!keys.events) lines.push('To find gigs, add TICKETMASTER_API_KEY to .env (free at developer.ticketmaster.com) and restart DJRepo.');
-  if (!keys.meta) lines.push('To write the emails, add MODEL_API_KEY to .env (from dev.meta.ai) and restart DJRepo.');
+  if (DEMO) lines.push(DEMO_GIGS);
+  else if (!keys.events) lines.push('To find gigs, add TICKETMASTER_API_KEY to .env (free at developer.ticketmaster.com) and restart DJRepo.');
+  if (!DEMO && !keys.meta) lines.push('To write the emails, add MODEL_API_KEY to .env (from dev.meta.ai) and restart DJRepo.');
   $('#gig-keys').replaceChildren(...lines.map((text) => Object.assign(document.createElement('p'), { textContent: text })));
   $('#gig-keys').hidden = !lines.length;
+  if (DEMO) $('#gig-status').textContent = 'No live search in the demo: run DJRepo yourself (docker compose up) to find real gigs.';
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +141,10 @@ function loadPlace() {
 
 async function search(place) {
   const status = $('#gig-status');
+  if (DEMO) {
+    status.textContent = 'The live demo can\'t search for gigs. Run DJRepo with Docker to find real ones.';
+    return;
+  }
   status.textContent = place.city ? `Looking for gigs in ${place.city}…` : 'Looking for gigs near you…';
   $('#gig-list').replaceChildren();
   try {

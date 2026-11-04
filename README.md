@@ -5,25 +5,38 @@
 **Your GitHub repo, played as a live EDM set with a light show.**<br>
 Battle two repos, or your code against a song. Bring in challengers mid-set. Then let Meta's Muse Spark find you a real gig.
 
-![Built with Meta Muse Spark](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark-0866FF)
-![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)
-![One command](https://img.shields.io/badge/run%20it-docker%20compose%20up-ff3fa4)
-![No samples](https://img.shields.io/badge/audio-100%25%20synthesised-ffd23f)
+[![Built with Meta Muse Spark](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark-0866FF)](#built-with-meta)
+[![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)](#built-with-meta)
+[![CI](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml/badge.svg)](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/live%20demo-no%20install-ff3fa4)](https://electronukem.github.io/DJRepo/)
 ![MIT license](https://img.shields.io/badge/license-MIT-3fd2ff)
+
+### [▶ Play the live demo](https://electronukem.github.io/DJRepo/): no install, just turn it up
 
 <img src="docs/screenshots/new-contender.webp" alt="A song called Meta Global AI Hackathon 2026 slams into the set under a full-screen 'A NEW CONTENDER HAS ARRIVED' title card" width="100%">
 
 </div>
 
-## Try it in one command
+**Why it matters.** Independent DJs spend hours digging into venues, finding out who books them, and
+writing cold pitches that mostly go unread. DJRepo does that research with Meta's Muse Spark, checks
+the booking contact against real pages, and hands you a pitch in your own voice, with a clip of your
+set attached, in about two minutes. And it makes code something you can hear and see: your commit
+history, played as a set.
+
+## Try it
+
+**In your browser:** the [live demo](https://electronukem.github.io/DJRepo/) plays five pre-built
+repos (two of them Meta's: `meta-llama/llama` and `facebookresearch/segment-anything`), battles,
+and song battles, with a demo song made by DJRepo. Nothing to install.
+
+**Everything, on your machine:** any public repo, plus the gig finder.
 
 ```sh
 docker compose up --build
 ```
 
-Open **http://localhost:8777**, paste a public repo (try `Electronukem/daily-projects`), and press
-**Drop it**. Turn it up. The set and the light show need no keys. The gig finder needs two
-([Keys](#keys)).
+Open **http://localhost:8777**, paste a public repo, and press **Drop it**. Turn it up. The set and
+the light show need no keys. The gig finder needs two ([Keys](#keys)).
 
 ## The 60-second tour
 
@@ -194,6 +207,42 @@ The voice is the browser's own speech (Edge's "Natural" voices sound best). Swit
 
 </details>
 
+## Proof it works
+
+**The song listener**, benchmarked on tracks where the answer is known, each with a trap real songs
+set: a dotted-eighth echo that looks like a faster tempo, two-step drum & bass that looks like half
+time, and silence before the first beat. It runs in CI on every push
+([`tests/listener-benchmark.mjs`](tests/listener-benchmark.mjs)):
+
+| Track | Tempo (true → heard) | Bar line off by | Key |
+| --- | --- | --- | --- |
+| House | 124 → 124.001 | 12 ms | A minor: right |
+| Techno, dotted-eighth echo | 131 → 131.001 | 12 ms | D minor → F major (its relative major) |
+| Drum & bass, two-step | 174 → 174.001 | 9 ms | F minor: right |
+| Trance | 138 → 138.000 | 12 ms | G major: right |
+| Big room, heavy echo | 128 → 128.000 | 12 ms | C major → A minor (its relative minor) |
+
+Every tempo is within 0.001 BPM and every bar line within 12 ms. Keys are exact on three of five,
+and the other two land on the relative key, which has the same notes, so the repo's lead still
+plays in tune. On full sets DJRepo renders itself (house, techno, drum & bass), measured in Chrome:
+tempo within 0.003 BPM, bar lines within 6 ms, and all three keys right. A song takes about half a
+second to analyse.
+
+**The gig finder**, with 39 tests ([`tests/`](tests/)), including:
+
+- A booking address is used only if it's on a page DJRepo read. A name is used only if a page names
+  that person.
+- The real fabric London case: its FAQ lists `events@` for *private hire*, and the check rules it out.
+- Template phrases ("I hope this email finds you well", em dashes, a pile of exclamation marks) are
+  caught, and the draft is rewritten.
+- It never reads private or local addresses, and API errors never echo the request URL (which can
+  carry a key).
+
+**Muse Spark in live runs:** a full pitch (research, facts, writing) took 177 s before tuning
+`reasoning_effort` and 122 s after. On fabric, the research found the club's real demo policy
+("email a 30 minute long demo mix along with some biographical information"), and no template
+phrases made it into the final drafts.
+
 ## Controls
 
 | Key | Does |
@@ -248,6 +297,8 @@ y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Option
 | [`web/gigs.js`](web/gigs.js), [`web/sample.js`](web/sample.js) | The gig finder screen, and the offline clip renderer |
 | [`web/song.js`](web/song.js), [`web/song-worker.js`](web/song-worker.js) | A song as a deck: decoding it, and the listener that finds its beat, key and shape |
 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | One-command setup |
+| [`tests/`](tests/) | The gig finder's and server's tests (`python -m pytest`), and the listener benchmark (`node tests/listener-benchmark.mjs`) |
+| [`demo/`](demo/), [`.github/workflows/`](.github/workflows/) | The live demo's pre-built repos and demo song, and the CI and Pages workflows |
 
 ## Notes
 

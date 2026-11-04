@@ -20,7 +20,16 @@ self.onmessage = ({ data }) => {
 function analyse(x, rate) {
   const duration = x.length / rate;
   const onset = onsets(x, rate);
-  const grid = findBeat(onset);
+  // The beat grid from each onset envelope; keep the one the music supports most strongly.
+  const grids = onset.envs.map((env) => {
+    try {
+      return findBeat({ env, fps: onset.fps });
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
+  if (!grids.length) throw new Error('no steady beat');
+  const grid = grids.reduce((a, b) => (b.confidence > a.confidence ? b : a));
   const beatLen = grid.period / onset.fps;
   const firstBeat = grid.phase / onset.fps + onset.delay;
 
@@ -126,19 +135,29 @@ function onsets(x, rate) {
   const frames = Math.max(0, Math.floor((x.length - n) / hop));
   const mag = new Float64Array(n / 2);
   const prev = new Float64Array(n / 2);
-  const env = new Float64Array(frames);
+  // The kick is what dance music hangs on, but it lives in a handful of low bins while a snare or a
+  // hat (and every echo of them) lights up hundreds. One envelope weights the lows so the kick counts
+  // as much as everything else; the other only nudges them, for music whose kick isn't on the beat
+  // (two-step drum & bass). findBeat tries both.
+  const lowTop = Math.round(200 / (rate / n));
+  const weights = [(n / 2 - lowTop) / lowTop, (n / 2 - lowTop) / lowTop / 8];
+  const raw = weights.map(() => new Float64Array(frames));
   for (let f = 0; f < frames; f++) {
     spectrum(plan, x, f * hop, mag);
-    let s = 0;
     for (let k = 1; k < n / 2; k++) {
       const v = Math.log1p(100 * mag[k]);
       const d = v - prev[k];
       prev[k] = v;
-      if (d > 0) s += d;
+      if (d > 0) weights.forEach((w, j) => { raw[j][f] += k <= lowTop ? d * w : d; });
     }
-    env[f] = s;
   }
   const fps = rate / hop;
+  return { envs: raw.map((env) => steady(env, fps)), fps, delay: n / 2 / rate };
+}
+
+// Onset strength with the steady level taken out, scaled to the strong hits (not the single loudest).
+function steady(env, fps) {
+  const frames = env.length;
   const w = Math.round(fps * 0.25);
   const sums = new Float64Array(frames + 1);
   for (let i = 0; i < frames; i++) sums[i + 1] = sums[i] + env[i];
@@ -148,10 +167,9 @@ function onsets(x, rate) {
     const hi = Math.min(frames, i + w + 1);
     out[i] = Math.max(0, env[i] - (sums[hi] - sums[lo]) / (hi - lo));
   }
-  // Scale to the strong hits, not the single loudest one.
   const top = Float64Array.from(out).sort()[Math.floor(frames * 0.98)] || 1;
   for (let i = 0; i < frames; i++) out[i] = Math.min(1, out[i] / top);
-  return { env: out, fps, delay: n / 2 / rate };
+  return out;
 }
 
 // The onset strength between frames, for fractional positions.
@@ -337,7 +355,8 @@ function beatFeatures(x, rate, beats, beatLen) {
   });
 }
 
-// Which of the four beats starts a bar: the one where the harmony and the bass change most.
+// Which of the four beats starts a bar: the one where the harmony changes most. (Not the bass
+// energy: a two-step kick on the "and" of three changes it more than any downbeat.)
 function downbeat(feats) {
   const score = [0, 0, 0, 0];
   for (let i = 1; i < feats.length; i++) {
@@ -351,7 +370,7 @@ function downbeat(feats) {
       na += a.chroma[k] ** 2;
       nb += b.chroma[k] ** 2;
     }
-    const change = 1 - dot / Math.sqrt(na * nb || 1) + 0.15 * Math.abs(b.low - a.low);
+    const change = 1 - dot / Math.sqrt(na * nb || 1);
     score[i % 4] += change;
   }
   return score.indexOf(Math.max(...score));

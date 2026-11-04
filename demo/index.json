@@ -1,0 +1,28 @@
+{
+  "repos": [
+    {
+      "name": "meta-llama/llama",
+      "file": "scenes/meta-llama__llama.json"
+    },
+    {
+      "name": "facebookresearch/segment-anything",
+      "file": "scenes/facebookresearch__segment-anything.json"
+    },
+    {
+      "name": "expressjs/express",
+      "file": "scenes/expressjs__express.json"
+    },
+    {
+      "name": "BurntSushi/ripgrep",
+      "file": "scenes/burntsushi__ripgrep.json"
+    },
+    {
+      "name": "Electronukem/daily-projects",
+      "file": "scenes/electronukem__daily-projects.json"
+    }
+  ],
+  "song": {
+    "name": "Meta Global AI Hackathon 2026.mp3",
+    "file": "meta-global-ai-hackathon-2026.mp3"
+  }
+}

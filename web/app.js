@@ -1823,7 +1823,91 @@ function relativeTime(iso) {
 // ---------------------------------------------------------------------------
 // The start screen
 
+// ---------------------------------------------------------------------------
+// The live demo: DJRepo on a static host (GitHub Pages), with no server. A few repos come pre-built,
+// songs work as ever (they never needed the server), and the gig finder points to the full version.
+
+const DEMO = location.hostname.endsWith('github.io') || new URLSearchParams(location.search).has('demo');
+let demoIndex = null;
+
+async function demoRepos() {
+  if (!demoIndex) {
+    const res = await fetch('demo/index.json');
+    if (!res.ok) throw new Error("Couldn't load the demo's repos.");
+    demoIndex = await res.json();
+  }
+  return demoIndex;
+}
+
+// Scenes for some repos: built by the server, or pre-built in the live demo. `report` and `alive`
+// are as for waitForJobs; the result is null if `alive` gave up.
+async function buildScenes(urls, { refresh = false, report, alive } = {}) {
+  if (!DEMO) {
+    const jobs = await Promise.all(urls.map((url) => postJSON('/api/build', { url, refresh })));
+    return waitForJobs(jobs.map((j) => j.job), urls.map(shortUrl), report, alive);
+  }
+  const { repos } = await demoRepos();
+  return Promise.all(urls.map(async (url) => {
+    const name = shortUrl(url).replace(/\/tree\/.*$/, '').replace(/\/+$/, '').toLowerCase();
+    const repo = repos.find((r) => r.name.toLowerCase() === name);
+    if (!repo) {
+      throw new Error(`The live demo has ${repos.map((r) => r.name).join(', ')} ready to play. `
+        + 'To play any public repo, run DJRepo yourself: docker compose up.');
+    }
+    const res = await fetch(`demo/${repo.file}`);
+    if (!res.ok) throw new Error(`Couldn't load ${repo.name}.`);
+    return res.json();
+  }));
+}
+
+// The demo song: made by DJRepo, so it's free to battle.
+async function demoSong() {
+  const { song } = await demoRepos();
+  const res = await fetch(`demo/${song.file}`);
+  if (!res.ok) throw new Error("Couldn't load the demo song.");
+  return new File([await res.blob()], song.name, { type: 'audio/mpeg' });
+}
+
+async function showDemoNotice() {
+  health = { demo: true, keys: {} };
+  $('#refresh').closest('.check').hidden = true;
+  const notice = $('#notice');
+  const intro = document.createElement('p');
+  intro.append('This is the live demo: no install. Play one of these repos, battle two of them, or battle a song. ',
+    'To play any public repo and pitch real gigs, run it yourself with ', Object.assign(document.createElement('code'), { textContent: 'docker compose up' }), '.');
+  const chips = document.createElement('p');
+  chips.className = 'demo-chips';
+  try {
+    const { repos } = await demoRepos();
+    for (const repo of repos) {
+      chips.append(chip(repo.name, null, () => {
+        const a = $('#repo-url');
+        const b = $('#repo-url-b');
+        if (!a.value.trim()) a.value = repo.name;
+        else if (!startSong && !b.value.trim() && a.value.trim() !== repo.name) b.value = repo.name;
+        else a.value = repo.name;
+        updateGoButton();
+      }));
+    }
+    chips.append(chip('♪ the demo song', null, async () => {
+      try {
+        pickStartSong(await demoSong());
+      } catch (err) {
+        showError(err.message);
+      }
+    }));
+  } catch (err) {
+    chips.textContent = err.message;
+  }
+  notice.replaceChildren(intro, chips);
+  notice.hidden = false;
+}
+
 async function checkHealth() {
+  if (DEMO) {
+    showDemoNotice();
+    return;
+  }
   try {
     health = await (await fetch('/api/health')).json();
   } catch {
@@ -1984,8 +2068,7 @@ async function addContender(source) {
     if (file) {
       scene = await loadSongScene(file, (step) => alive() && showCooking(order.name, step));
     } else {
-      const { job } = await postJSON('/api/build', { url });
-      const scenes = await waitForJobs([job], [order.name], (steps) => alive() && showCooking(order.name, steps[0]), alive);
+      const scenes = await buildScenes([url], { report: (steps) => alive() && showCooking(order.name, steps[0]), alive });
       if (!scenes) return;
       scene = trimScene(scenes[0], BATTLE_NODES);
     }
@@ -2294,10 +2377,12 @@ $('#repo-form').addEventListener('submit', async (event) => {
     let heard = song ? 'Getting ready' : '';
     const listening = song ? loadSongScene(song, (step) => (heard = step)) : null;
     if (listening) listening.catch(() => {});  // reported below, once the repos are done
-    const jobs = await Promise.all(urls.map((url) => postJSON('/api/build', { url, refresh })));
     const report = (steps, logs) => showProgress(song ? [...steps, `♪ ${songTitle(song.name)}: ${heard}`] : steps, logs);
-    const scenes = await waitForJobs(jobs.map((j) => j.job), urls.map(shortUrl), report);
-    if (song) scenes.push(await listening);
+    const scenes = await buildScenes(urls, { refresh, report });
+    if (song) {
+      $('#step').textContent = `♪ ${songTitle(song.name)}: listening`;
+      scenes.push(await listening);
+    }
     remember(urls[1] ? { a: urls[0], b: urls[1] } : { a: urls[0] });
     await begin(scenes);
   } catch (err) {

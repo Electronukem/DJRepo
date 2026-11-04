@@ -42,7 +42,7 @@ _DOT = re.compile(r"\s*[\[\(\{]\s*dot\s*[\]\)\}]\s*", re.I)
 _NOT_EMAIL = re.compile(r"\.(png|jpe?g|gif|webp|svg|css|js)$|@(sentry|wixpress|example)\.|^(no-?reply|privacy|abuse|webmaster)@", re.I)
 _BOOKING = re.compile(r"book|talent|music|promo|artist|gig|program|entertain|demo", re.I)
 # What the words just before an address say it's for. A club's events@ is often private hire.
-_WRONG_INBOX = re.compile(r"hire|\bvip\b|table|\bjobs?\b|staff|position|vacanc|lost|cloakroom|access|wheelchair|press|media|"
+_WRONG_INBOX = re.compile(r"hire|\bvip\b|table|\bjobs?\b|staff|position|vacanc|\blos[et]\b|cloakroom|access|wheelchair|press|media|"
                           r"gdpr|data|privacy|refund|ticket|guest ?list|birthday|wedding|corporate|merch|store|order", re.I)
 _DJ_INBOX = re.compile(r"\bdjs?\b|demo|artist|talent|promot|submission|line-?up|programming|perform|play at|agent", re.I)
 
@@ -391,6 +391,8 @@ def _inbox_fits(text: str, email: str) -> bool | None:
     """Whether the words just before an address say it's for DJs and bookings (True), for something
     else such as private hire or jobs (False), or don't say (None)."""
     low, e = text.lower(), email.lower()
+    if _WRONG_INBOX.search(e.split("@")[0]):  # cloakroom@, vip@, jobs@ are never for DJs
+        return False
     verdict = None
     for m in re.finditer(re.escape(e), low):
         lead = low[max(0, m.start() - 90):m.start()]
