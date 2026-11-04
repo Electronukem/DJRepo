@@ -34,7 +34,7 @@
 <ellipse cx="292" cy="306.0" rx="3.5" ry="6.0" fill="#ffd23f"/>
 <ellipse cx="300" cy="304.5" rx="3.5" ry="7.5" fill="#ff7a3f"/>
 <ellipse cx="308" cy="306.0" rx="3.5" ry="6.0" fill="#ff3fa4"/>
-<text x="322" y="306" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="13" font-weight="800" fill="#ff7a3f" text-anchor="start" >CLAUDE IS COOKING</text>
+<text x="322" y="306" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="13" font-weight="800" fill="#ff7a3f" text-anchor="start" >META IS COOKING</text>
 <text x="322" y="321" font-family="Consolas, Menlo, monospace" font-size="10" font-weight="400" fill="#a49cc4" text-anchor="start" >owner/repo-c · Mapping the code</text>
 <line x1="238.5" y1="418.9" x2="236.1" y2="401.9" stroke="#ff3fa4" stroke-opacity="0.28" stroke-width="1"/>
 <line x1="238.5" y1="418.9" x2="245.0" y2="434.8" stroke="#ff3fa4" stroke-opacity="0.28" stroke-width="1"/>
@@ -465,7 +465,7 @@
 <ellipse cx="886" cy="497.0" rx="3" ry="5.0" fill="#ffd23f"/>
 <ellipse cx="893" cy="495.5" rx="3" ry="6.5" fill="#ff7a3f"/>
 <ellipse cx="900" cy="497.0" rx="3" ry="5.0" fill="#ff3fa4"/>
-<text x="912" y="502" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" font-weight="800" fill="#ff7a3f" text-anchor="start" >CLAUDE IS COOKING</text>
+<text x="912" y="502" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="11" font-weight="800" fill="#ff7a3f" text-anchor="start" >META IS COOKING</text>
 <rect x="852" y="538" width="290" height="196" rx="12" fill="#150f2a" stroke="#3a2f55" />
 <text x="868" y="564" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="12" font-weight="700" fill="#f4f0ff" text-anchor="start" letter-spacing="1.5">MIXER</text>
 <rect x="868" y="576" width="117" height="24" rx="12" fill="none" stroke="#3a2f55" />
@@ -511,7 +511,7 @@
 <text x="78" y="644" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#f4f0ff" text-anchor="start" >In a battle, every kick throws a punch, and the meter swings to whoever lands more.</text>
 <circle cx="54" cy="669" r="13" fill="#ffd23f"/>
 <text x="54" y="674" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#1a0012" text-anchor="middle" >3</text>
-<text x="78" y="674" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#f4f0ff" text-anchor="start" >Add a repo mid-set: Claude is cooking, then A NEW CONTENDER HAS ARRIVED.</text>
+<text x="78" y="674" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#f4f0ff" text-anchor="start" >Add a repo or a song mid-set: Meta is cooking, then A NEW CONTENDER.</text>
 <circle cx="54" cy="699" r="13" fill="#ffd23f"/>
 <text x="54" y="704" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="800" fill="#1a0012" text-anchor="middle" >4</text>
 <text x="78" y="704" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="400" fill="#f4f0ff" text-anchor="start" >Controls fade while you watch, or move to a window of their own.</text>

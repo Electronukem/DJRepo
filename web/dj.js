@@ -59,7 +59,9 @@ const CHANNELS = [
   { id: 'arp', name: 'Arpeggio', group: 'synths', level: 0.45, trim: 1.5, duck: 1, reverb: 0.5, echo: 0.6 },
   { id: 'lead', name: 'Lead (the graph)', group: 'synths', level: 0.7, trim: 3.2, duck: 0.5, reverb: 0.6, echo: 0.7 },
   { id: 'fx', name: 'Risers & impacts', group: 'fx', level: 0.6, trim: 0.8, reverb: 0.8 },
+  { id: 'song', name: 'Your song', group: 'fx', level: 0.85, trim: 1, duck: 0.5 },
 ];
+const SILENT = '----------------';
 const CHANNEL = Object.fromEntries(CHANNELS.map((c) => [c.id, c]));
 
 // gain: loudness calibration between the lead sounds.
@@ -201,11 +203,33 @@ function defaultMix(sets) {
 
 // A deck's sound: its genre's patterns in its own key, mode and tempo.
 function deckSound(set, id) {
+  if (set.song) return songSound(set, id);
   const g = GENRES[set.genre];
   return {
     id, bpm: set.bpm, key: set.key, mode: set.mode, progression: set.progression, swing: g.swing || 0,
     lead: set.lead, reverb: set.reverb, drums: g.drums, kick: g.kick, perc: g.perc, snare: Boolean(g.snare),
     pump: g.pump, bass: g.bass, chords: g.chords, arp: g.arp,
+  };
+}
+
+// A song as a deck: it plays the recording itself (see playSong), so every synthesised part is silent,
+// in its own key at its own exact tempo.
+function songSound(set, id) {
+  const s = set.song;
+  return {
+    id, song: s, bpm: s.bpm, key: s.key, mode: s.mode, progression: [0, 0, 0, 0], swing: 0, lead: set.lead, reverb: set.reverb,
+    drums: { kick: SILENT, clap: SILENT, hatC: SILENT, hatO: SILENT, perc: SILENT }, kick: 'punchy', perc: 'shaker',
+    snare: false, pump: 0, bass: { style: 'sub', pattern: SILENT }, chords: { style: 'pad', pattern: SILENT }, arp: null,
+  };
+}
+
+// The drop a repo and a song make together: the song as it is, with the repo's drums (and its graph
+// playing the lead) on top, in the song's tempo and key.
+function songMash(repo, song) {
+  return {
+    ...repo, id: 'mix', withSong: song, bpm: song.bpm, key: song.key, mode: song.mode, progression: [0, 0, 0, 0],
+    swing: 0, lead: null, pump: (repo.pump ?? 0.6) * 0.6, bass: { style: 'sub', pattern: SILENT },
+    chords: { style: 'pad', pattern: SILENT }, arp: null,
   };
 }
 
@@ -342,8 +366,32 @@ class DJ {
 
   remix() {
     const [a, b] = this.decks;
+    const song = this.songDeck;
+    if (song && b) {
+      // A song can't move, so the repo comes to it.
+      const repo = this.decks[1 - song.id];
+      this.mash = songMash(repo, song);
+      this.keyShift = ((song.key - repo.key + 18) % 12) - 6;  // how far the repo moves to meet the song's key
+      return;
+    }
     this.mash = b ? mashSound(a, b, this.mashParts) : null;
     this.keyShift = b ? ((a.key - b.key + 18) % 12) - 6 : 0;  // how far B moves to meet A's key
+  }
+
+  // The deck that's a song, if one is.
+  get songDeck() {
+    return this.decks.find((d) => d && d.song) || null;
+  }
+
+  // Which bar of the song plays on the song's nth bar in the set: from its loudest stretch, looping.
+  songPos(deck, n) {
+    const s = deck.song;
+    return s.startBar + (n % Math.max(1, s.bars - s.startBar));
+  }
+
+  // The song a bar or a turn belongs to, if any.
+  songIn(sound) {
+    return sound.song ? sound : sound.withSong || null;
   }
 
   // Forget bars that haven't been played yet, so they're rebuilt from the current plan.
@@ -473,6 +521,7 @@ class DJ {
     const p = this.phraseAt(index);
     const pb = index - p.start;
     const [a, b] = this.decks;
+    const song = this.songDeck;
     let harmony = a;
     let turns = null;
     let split = 0;
@@ -482,15 +531,23 @@ class DJ {
       bpm = harmony.bpm;
     } else if (p.stage === 'sync' && p.section === 'drop') {
       // Trading: B walks to A's key over the first four bars while both tempos glide to the middle.
+      // A song can't move, so against a song the repo comes to its tempo at once, and to its key.
       const u = pb / Math.max(1, p.bars - 1);
       const shift = Math.round(this.keyShift * Math.min(1, pb / 4));
-      const moved = shift ? { ...b, key: (b.key + shift + 12) % 12 } : b;
-      const sides = p.deck === 1 ? [moved, a] : [a, moved];
+      let sides;
+      if (song) {
+        const repo = this.decks[1 - song.id];
+        const matched = { ...repo, key: (repo.key + shift + 12) % 12, bpm: song.bpm };
+        sides = p.deck === song.id ? [song, matched] : [matched, song];
+      } else {
+        const moved = shift ? { ...b, key: (b.key + shift + 12) % 12 } : b;
+        sides = p.deck === 1 ? [moved, a] : [a, moved];
+      }
       split = TRADE[Math.min(pb, TRADE.length - 1)];
       if (split >= 16) {
         harmony = sides[pb % 2];
         split = 0;
-        bpm = harmony.bpm + (this.mash.bpm - harmony.bpm) * u;
+        bpm = song ? song.bpm : harmony.bpm + (this.mash.bpm - harmony.bpm) * u;
       } else {
         turns = sides;
         harmony = this.mash;
@@ -501,6 +558,10 @@ class DJ {
       bpm = this.mash.bpm;
     }
     const beat = 60 / bpm;
+    // Which of the song's bars this is, counting only bars the song plays in, so it carries on
+    // where it left off after the repo's round.
+    const songOn = Boolean(song) && [harmony, ...(turns || [])].some((x) => this.songIn(x) === song);
+    const songBar = prev && prev.songDeck === song ? prev.songBar + (prev.songOn ? 1 : 0) : 0;
     return {
       index, pb, phrase: p, harmony, turns, split, bpm, beat,
       start: prev ? prev.start + prev.len : this.start,
@@ -509,6 +570,7 @@ class DJ {
       beats0: prev ? prev.beats0 + 4 : 0,
       swing: harmony.swing,
       deck: turns ? turns[0].id : harmony.id,
+      songDeck: song, songOn, songBar,
     };
   }
 
@@ -655,6 +717,25 @@ class DJ {
 
     if (s === 0) this.startBar(bar, t, sound, fill);
 
+    // A song plays itself: a slice of the recording for each stretch of the bar that's its turn, or
+    // all of a bar it shares, but not the beat of silence before a drop. Its own beats throw the
+    // punches, as a repo's kicks and claps do.
+    const song = this.songIn(r);
+    if (song) {
+      const startsHere = s === 0 || this.songIn(this.rhythm(bar, s - 1)) !== song;
+      if (sound && startsHere) {
+        let k = 1;
+        while (s + k < 16 && this.songIn(this.rhythm(bar, s + k)) === song) k++;
+        if (sec === 'build' && lastBar) k = Math.min(k, 12 - s);
+        if (k > 0) this.playSong(song, bar, s, k, t);
+      }
+      if (r.song && s % 4 === 0) {
+        const beat = this.songPos(r, bar.songBar) * 4 + s / 4;
+        this.hit('kick', t, 0.4 + 0.6 * (r.song.kicks[beat] ?? 0.5), r.id);
+        if (s === 4 || s === 12) this.hit('clap', t, 0.3 + 0.6 * (r.song.snaps[beat] ?? 0.5), r.id);
+      }
+    }
+
     // Kick: everywhere but the breakdown, out for the last stretch of a build-up and the last beat of a round.
     const kickOn = (sec === 'drop' && !(fill && s >= 12)) || sec === 'groove' || sec === 'intro' || (sec === 'build' && prog < 0.75);
     const kv = kickOn ? lane(d.kick, s) : 0;
@@ -732,15 +813,44 @@ class DJ {
       if (pb === 0) this.phraseFx(t, bar);
       if (fill) this.riser(t, bar.len - bar.beat, chord.root);
       if (sec === 'drop' && pb === 8) this.crash(t, 0.7);
-      if (sec !== 'intro') this.chordBar(t, bar, chord, sec, pb / p.bars);
-      if (sec !== 'groove') this.padBar(t, bar, chord, sec, pb / p.bars);
+      const songBar = Boolean(this.songIn(bar.harmony));  // a song brings its own harmony
+      if (sec !== 'intro' && !songBar) this.chordBar(t, bar, chord, sec, pb / p.bars);
+      if (sec !== 'groove' && !songBar) this.padBar(t, bar, chord, sec, pb / p.bars);
     }
     if (this.onBar) {
       this.onBar(bar.index, t, {
         section: sec, stage: p.stage, phraseBar: pb, bars: p.bars, chord, deck: bar.deck, bpm: bar.bpm,
         turns: bar.turns ? bar.turns.map((x) => x.id) : null, split: bar.split,
+        songBar: bar.songOn ? this.songPos(bar.songDeck, bar.songBar) : null,
       });
     }
+  }
+
+  // A slice of the song: `steps` sixteenths of its bar from step `s`, with fades of a few
+  // milliseconds that cross over exactly, so back-to-back slices join without a seam.
+  playSong(deck, bar, s, steps, t) {
+    const song = deck.song;
+    const ctx = this.ctx;
+    const sixteenth = song.barLen / 16;
+    const offset = song.first + (this.songPos(deck, bar.songBar) * 16 + s) * sixteenth;
+    if (offset >= song.buffer.duration) return;
+    const fade = 0.004;
+    const at = this.toAudio(t);
+    const length = steps * sixteenth;
+    const late = Math.max(0, ctx.currentTime - (at - fade));
+    if (length + 2 * fade - late < 0.01) return;
+    const level = CHANNEL.song.trim * song.gain;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, at - fade);
+    g.gain.linearRampToValueAtTime(level, at + fade);
+    g.gain.setValueAtTime(level, at + length - fade);
+    g.gain.linearRampToValueAtTime(0, at + length + fade);
+    g.connect(this.desk.inputs.song);
+    const src = ctx.createBufferSource();
+    src.buffer = song.buffer;
+    src.connect(g);
+    src.start(at - fade + late, Math.max(0, offset - fade + late), length + 2 * fade - late);
+    this.release(src, g);
   }
 
   // Filter moves, risers and impacts at the top of each phrase.

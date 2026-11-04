@@ -3,7 +3,7 @@
 # DJRepo
 
 **Your GitHub repo, played as a live EDM set with a light show.**<br>
-Battle two repos. Bring in challengers mid-set. Then let Meta's Muse Spark find you a real gig.
+Battle two repos, or your code against a song. Bring in challengers mid-set. Then let Meta's Muse Spark find you a real gig.
 
 ![Built with Meta Muse Spark](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark-0866FF)
 ![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)
@@ -11,7 +11,7 @@ Battle two repos. Bring in challengers mid-set. Then let Meta's Muse Spark find 
 ![No samples](https://img.shields.io/badge/audio-100%25%20synthesised-ffd23f)
 ![MIT license](https://img.shields.io/badge/license-MIT-3fd2ff)
 
-<img src="docs/screenshots/new-contender.webp" alt="A new repo slams into the set mid-battle under a full-screen 'A NEW CONTENDER HAS ARRIVED' title card" width="100%">
+<img src="docs/screenshots/new-contender.webp" alt="A song called Meta Global AI Hackathon 2026 slams into the set under a full-screen 'A NEW CONTENDER HAS ARRIVED' title card" width="100%">
 
 </div>
 
@@ -32,22 +32,25 @@ Open **http://localhost:8777**, paste a public repo (try `Electronukem/daily-pro
    while the camera slams in and out with the kick.
 2. **Battle.** Two repos take eight-bar rounds in their own genres and throw punches on every kick.
    Press **D** and they sync up: they trade bars, their tempos meet, and they land in one mashup drop.
-3. **A new contender.** Press **A** mid-set and paste another repo. The music never stops: *"Claude
-   is cooking"* while it loads, then the room builds up, a title card slams in, and the newcomer
-   crashes onto the stage on the drop. Winner stays on.
-4. **The control deck.** Press **C** to move every control to a second window, so the show stays
+3. **Battle a song.** Drop in an MP3 instead of a second repo, and your code fights it. DJRepo
+   listens to the song in your browser, finds its tempo, bars and key, and draws it as a graph of its
+   own: every beat a star, sounds that match in the same colour, and repeats linked together.
+4. **A new contender.** Press **A** mid-set and paste another repo, or drop in a song. The music never
+   stops: *"Meta is cooking"* while it loads, then the room builds up, a title card slams in, and the
+   newcomer crashes onto the stage on the drop. Winner stays on.
+5. **The control deck.** Press **C** to move every control to a second window, so the show stays
    full screen and clean on the big screen while you DJ from your laptop.
-5. **Find a gig.** Real upcoming dance and electronic nights on a map (it opens on Boston). Pick one
+6. **Find a gig.** Real upcoming dance and electronic nights on a map (it opens on Boston). Pick one
    and **Muse Spark** researches the room, the night and who books it, then drafts a booking email
    in your voice with a clip of your set attached.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/battle.webp" alt="Two repos battling: two constellations face off with a VS line and a tug-of-war meter"></td>
+    <td width="50%"><img src="docs/screenshots/battle.webp" alt="A repo battling a song: the song's graph lights up beat by beat, each star labelled with its time in the song"></td>
     <td width="50%"><img src="docs/screenshots/find-a-gig.webp" alt="The gig finder: 100 real upcoming events around Boston on a dark map"></td>
   </tr>
   <tr>
-    <td align="center"><b>Battle:</b> every kick throws a punch</td>
+    <td align="center"><b>Battle a song:</b> every beat of it is a star</td>
     <td align="center"><b>Find a gig:</b> real nights around Boston</td>
   </tr>
 </table>
@@ -139,9 +142,34 @@ With two repos, each is a deck with its own genre, key and tempo, and its graph 
 </details>
 
 <details>
+<summary><b>Battling a song</b></summary>
+
+Pick **♪ or a song** next to the second repo box, or drop an audio file anywhere on the page (MP3,
+WAV, M4A, OGG or FLAC). It's decoded and listened to in a Web Worker in your browser, and never
+uploaded.
+
+- **Listening.** The listener finds the onsets, then the tempo (and checks it isn't an echo or
+  half-time in disguise), then fits a beat grid to the whole song so it doesn't drift. Bars start
+  where the harmony changes, and the key comes from the song's pitch profile.
+- **Its graph.** Every beat is a star. Beats that sound alike (harmony and timbre, over a bar)
+  cluster into "sounds", each with its own colour, and passages that come back link to where they
+  were heard before, so the song's shape pulls together.
+- **In the battle.** The song plays as it is: never stretched, never re-pitched. It comes in at its
+  most intense stretch, and each bar of the recording lands on DJRepo's bar grid. Its own beats throw
+  the punches, and the caption shows where you are in it.
+- **Together.** Press **D** and the repo comes to the song's tempo and key. They trade turns, chopped
+  down to eighth notes, and then drop together: the song with the repo's drums on top and its graph
+  on lead.
+
+A new song added mid-set takes over from a song that's already playing, so it's always code against
+a song.
+
+</details>
+
+<details>
 <summary><b>A new contender, step by step</b></summary>
 
-- While the repo loads, the set carries on, and a banner and the announcer say **"Claude is cooking"**.
+- While the repo loads, the set carries on, and a banner and the announcer say **"Meta is cooking"**.
   The new graph's layout is settled a few milliseconds at a time, so the music never stutters.
 - When it's ready, the deck that stays builds up for four bars under a full-screen **A NEW CONTENDER
   HAS ARRIVED** card, with the music dipping under the voice. The name is revealed halfway through.
@@ -171,7 +199,7 @@ The voice is the browser's own speech (Edge's "Natural" voices sound best). Swit
 | Key | Does |
 | --- | --- |
 | **D** | Skip to the next drop. In a battle: sync the decks into one drop |
-| **A** | Bring in another repo while the set plays |
+| **A** | Bring in another repo, or a song, while the set plays |
 | **C** | Put the controls in a window of their own |
 | **X** | Mixer |
 | **F** | Full screen |
@@ -218,11 +246,13 @@ y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Option
 | [`web/genres.js`](web/genres.js) | The five genres: tempos, patterns and colours |
 | [`web/deck.html`](web/deck.html), [`web/deck.js`](web/deck.js) | The control deck window |
 | [`web/gigs.js`](web/gigs.js), [`web/sample.js`](web/sample.js) | The gig finder screen, and the offline clip renderer |
+| [`web/song.js`](web/song.js), [`web/song-worker.js`](web/song-worker.js) | A song as a deck: decoding it, and the listener that finds its beat, key and shape |
 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | One-command setup |
 
 ## Notes
 
 - Only public repositories work, because nothing asks for GitHub credentials.
+- Songs stay in your browser. The listener works best on music with a steady beat and a clear kick.
 - Results are cached in `.cache/` (a Docker volume, in Docker), so anything you've played before
   opens instantly from the chips on the start screen.
 - Very large graphs are trimmed to their 1,500 most connected nodes, and 900 each in a battle.

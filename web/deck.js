@@ -91,6 +91,11 @@ function build() {
   $('#d-announcer').addEventListener('change', (e) => send('announcer', e.target.checked));
   $('#d-reset').addEventListener('click', () => send('reset'));
   $('#d-cooking-close').addEventListener('click', () => send('stopCooking'));
+  $('#d-add-song').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (file && state && state.playing && !state.busy) send('addSong', file);
+  });
   $('#d-add-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const url = $('#d-add-url').value.trim();
@@ -118,7 +123,7 @@ function render() {
   document.body.classList.toggle('idle-show', !playing);
 
   for (const [sel, d] of [['#d-name-a', a], ['#d-name-b', b]]) {
-    $(sel).textContent = d ? (d.waiting ? '???' : d.short) : sel === '#d-name-a' ? 'DJRepo' : '';
+    $(sel).textContent = d ? (d.waiting ? '???' : d.song ? `♪ ${d.short}` : d.short) : sel === '#d-name-a' ? 'DJRepo' : '';
     $(sel).title = d && !d.waiting ? d.name : '';
   }
   $('#d-name-b').hidden = !battle;
@@ -156,11 +161,20 @@ function render() {
     $('#d-cooking-step').textContent = cooking.step;
   }
 
-  // The mixer.
+  // The mixer. A song plays as it is, so it has no genre to pick or parts to trade.
   for (const sel of ['#d-genres-b', '#d-genres-b-label', '#d-genres-a-label', '#d-mashup']) $(sel).hidden = !battle;
+  const song = playing ? s.decks.findIndex((d) => d.song) : -1;
+  $('#d-genres-a').hidden = song === 0;
+  if (song === 1) $('#d-genres-b').hidden = true;
   if (battle) {
-    $('#d-genres-a-label').textContent = `A · ${a.short}`;
-    $('#d-genres-b-label').textContent = `B · ${b.short}`;
+    const name = (d) => (d.song ? `${d.short} (a song plays as it is)` : d.short);
+    $('#d-genres-a-label').textContent = `A · ${name(a)}`;
+    $('#d-genres-b-label').textContent = `B · ${name(b)}`;
+  }
+  $('#d-mash-rows').hidden = battle && song >= 0;
+  $('#d-mash-song').hidden = !(battle && song >= 0);
+  if (battle && song >= 0) {
+    $('#d-mash-song').textContent = `${s.decks[song].short} plays as it is, with ${s.decks[1 - song].short}'s drums on top and its graph on lead.`;
   }
   if (!s) return;
   for (const button of document.querySelectorAll('[data-genre]')) {

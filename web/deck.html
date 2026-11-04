@@ -59,10 +59,12 @@
         <input id="d-add-url" type="text" inputmode="url" placeholder="github.com/owner/repository" spellcheck="false" required>
         <button id="d-add-go" class="drop-button" type="submit">Bring it</button>
       </form>
+      <p class="add-or">or <label class="file-link">bring in a song<input id="d-add-song" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.aif,.aiff" hidden></label>
+        to battle. It stays on this computer.</p>
       <div id="d-cooking" class="cooking d-cooking" role="status" hidden>
         <span class="flames" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="cooking-text">
-          <span id="d-cooking-title" class="cooking-title">Claude is cooking</span>
+          <span id="d-cooking-title" class="cooking-title">Meta is cooking</span>
           <span id="d-cooking-step" class="cooking-step"></span>
         </span>
         <button id="d-cooking-close" class="icon cooking-close" type="button" aria-label="Stop waiting for this repo" title="Stop">
@@ -82,6 +84,7 @@
       <section id="d-mashup" hidden>
         <h2>Mashup <span>who brings what to the drop you make together</span></h2>
         <div id="d-mash-rows"></div>
+        <p id="d-mash-song" class="mash-song" hidden></p>
       </section>
       <section>
         <h2>Lead synth <span>plays the graph</span></h2>

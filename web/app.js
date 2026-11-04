@@ -52,9 +52,9 @@ class Graph {
     this.scene = scene;
     this.set = set;
     this.index = index;
-    this.name = `${scene.repo.owner}/${scene.repo.name}`;
-    this.short = scene.repo.name;
-    this.repoGenre = deriveSet(scene).genre;  // what the repository picks, whatever is playing
+    this.name = scene.song ? scene.title : `${scene.repo.owner}/${scene.repo.name}`;
+    this.short = scene.song ? scene.title : scene.repo.name;
+    this.repoGenre = (scene.song ? songSet(scene) : deriveSet(scene)).genre;  // what it picks, whatever is playing
     this.hueBase = (hashString(this.name) + index * 151) % 360;
     this.applyPalette(GENRES[set.genre]);
 
@@ -224,8 +224,13 @@ class Graph {
 
   // ---- riffs ----
 
-  nextCommit(bar, t, section, allow = () => true) {
+  nextCommit(bar, t, section, allow = () => true, info = {}) {
     const commits = this.scene.commits;
+    if (this.scene.song) {  // a song's bars light up as they play
+      const k = (info.songBar ?? this.commitIndex++) % commits.length;
+      this.playCommit(commits[k], bar, t, k + 1, section, allow);
+      return;
+    }
     if (!commits.length) {
       this.playHubs(bar, section, allow);
       return;
@@ -238,17 +243,21 @@ class Graph {
   // A commit drops: the code it touched fires as a riff on the bar, then ripples outward.
   // `allow` says which sixteenths are this deck's to play (all of them, unless the decks are trading).
   playCommit(commit, bar, t, number, section, allow) {
+    const song = Boolean(this.scene.song);
     const quiet = !commit.n.length;  // eg docs-only changes graphify doesn't map
     const touched = quiet ? [this.randomNode(), this.randomNode(), this.randomNode()] : commit.n.map((i) => this.nodes[i]).filter(Boolean);
-    const rhythm = turnSteps(section === 'drop' ? this.genre.hook : section === 'break' ? [0, 6, 12] : [0, 4, 8, 12], allow);
+    const steps = song ? [0, 4, 8, 12] : section === 'drop' ? this.genre.hook : section === 'break' ? [0, 6, 12] : [0, 4, 8, 12];
+    const rhythm = turnSteps(steps, allow);
     if (!rhythm.length || !touched.length) return;
-    const phrase = [...new Set(touched)].sort((a, b) => a.sx - b.sx).slice(0, rhythm.length);
+    // A song's beats fire on their own beats; a commit's code plays left to right.
+    const phrase = song ? rhythm.map((s) => touched[Math.min(touched.length - 1, s >> 2)])
+      : [...new Set(touched)].sort((a, b) => a.sx - b.sx).slice(0, rhythm.length);
     const intensity = Math.min(1, commit.f / 12);
     const velocity = { drop: 0.85, groove: 0.6, build: 0.6, intro: 0.5, break: 0.45 }[section];
     const hold = music.beatAt(t) * 4 * (section === 'drop' ? 1.4 : 2.4);
     phrase.forEach((n, k) => {
       const at = music.stepTime(bar * 16 + rhythm[k]);
-      this.show.claimSlot(at);
+      if (!song) this.show.claimSlot(at);
       this.sound(n, at, (quiet ? 0.6 : 1) * velocity * (0.85 + 0.15 * intensity));
       this.flash(n, at, 1, 1.4);
       if (!quiet) {
@@ -283,7 +292,7 @@ class Graph {
       const to = this.nodes[neighbours[(Math.random() * neighbours.length) | 0]];
       const end = music.quantize(at + music.beatAt(at) * (0.5 + Math.random()), 0.25);
       const pulse = { from, to, start: at, end, hops, sounding: false, arrived: false };
-      if (sounding && this.show.claimSlot(end)) {
+      if (sounding && !this.scene.song && this.show.claimSlot(end)) {
         pulse.sounding = true;
         this.sound(to, end, 0.3 + 0.2 * Math.random());
         this.flash(to, end, 0.8, 1.2);
@@ -306,6 +315,7 @@ class Graph {
 
   // What the node looks like right now decides what it sounds like; this deck's lead synth plays it.
   sound(node, at, velocity) {
+    if (this.scene.song) return;  // a song is its own music; its graph only lights up
     const height = 1 - clamp(node.sy / view.h, 0, 1);
     const pan = clamp((node.sx / view.w) * 2 - 1, -1, 1) * 0.7;
     const midi = music.pitch(this.palette[node.c].tone, height, node.weight, at);
@@ -705,12 +715,12 @@ class Show {
     if (info.turns) {
       // Trading turns: each deck's riff lands on its own sixteenths.
       const turnOf = (s) => info.turns[Math.floor((phraseBar * 16 + s) / info.split) % 2];
-      for (const g of this.graphs) g.nextCommit(bar, t, section, (s) => turnOf(s) === g.index);
+      for (const g of this.graphs) g.nextCommit(bar, t, section, (s) => turnOf(s) === g.index, info);
       return;
     }
     // A riff per bar in a drop, every other bar elsewhere, and only one as a build-up starts.
     if (section === 'build' ? phraseBar !== 0 : phraseBar % (section === 'drop' ? 1 : 2) !== 0) return;
-    (lead || this.graphs[bar % this.graphs.length]).nextCommit(bar, t, section);
+    (lead || this.graphs[bar % this.graphs.length]).nextCommit(bar, t, section, undefined, info);
   }
 
   mixedHue() {
@@ -1351,6 +1361,9 @@ function saveSettings() {
 
 const genreChoice = (deck) => (deck ? settings.genreB : settings.genre);
 
+// A deck's set: a repo's from its history and the mixer's choices, a song's from what it sounds like.
+const setFor = (scene, deck) => (scene.song ? songSet(scene) : deriveSet(scene, genreChoice(deck), settings.lead));
+
 // The mix to play: the person's own changes on top of what the sets suggest.
 function mixFor(sets) {
   const suggested = defaultMix(sets);
@@ -1477,6 +1490,7 @@ function changeChannel(id, patch) {
 
 function applyGenre(id, deck = 0) {
   if (genreChoice(deck) === id && world) return;
+  if (world && world.graphs[deck] && world.graphs[deck].scene.song) return;  // a song plays as it is
   settings[deck ? 'genreB' : 'genre'] = id;
   saveSettings();
   const g = world && world.graphs[deck];
@@ -1495,6 +1509,7 @@ function applyLead(id) {
   saveSettings();
   if (world) {
     for (const g of world.graphs) {
+      if (g.scene.song) continue;
       g.set = deriveSet(g.scene, genreChoice(g.index), id);
       music.setLead(g.index, g.set.lead);
     }
@@ -1522,6 +1537,7 @@ function describeChannel(id, set) {
     case 'pad': return 'swells under the intro, build-ups and breakdowns';
     case 'arp': return 'up and down each chord';
     case 'lead': return `${LEADS[set.lead]?.name || 'Pluck'}: plays the nodes as light reaches them`;
+    case 'song': return 'your song, as it is';
     default: return 'risers, impacts and crashes';
   }
 }
@@ -1529,13 +1545,25 @@ function describeChannel(id, set) {
 // Reflect the current genres, lead, mashup and mix.
 function syncMixer() {
   const battle = Boolean(world && world.battle);
-  $('#genres-b').hidden = !battle;
+  const songAt = world ? world.graphs.findIndex((g) => g.scene.song) : -1;
+  $('#genres').hidden = songAt === 0;  // a song plays as it is
+  $('#genres-b').hidden = !battle || songAt === 1;
   $('#genres-b-label').hidden = !battle;
   $('#genres-a-label').hidden = !battle;
   $('#mashup').hidden = !battle;
   if (battle) {
-    $('#genres-a-label').textContent = `A · ${world.graphs[0].short}`;
-    $('#genres-b-label').textContent = `B · ${world.graphs[1].short}`;
+    const name = (g) => (g.scene.song ? `${g.short} (a song plays as it is)` : g.short);
+    $('#genres-a-label').textContent = `A · ${name(world.graphs[0])}`;
+    $('#genres-b-label').textContent = `B · ${name(world.graphs[1])}`;
+  }
+  // Against a song, the drop together is always the song with the repo's drums and lead on top.
+  const songMash = battle && songAt >= 0;
+  $('#mash-rows').hidden = songMash;
+  $('#mash-song').hidden = !songMash;
+  if (songMash) {
+    const song = world.graphs[songAt];
+    const repo = world.graphs[1 - songAt];
+    $('#mash-song').textContent = `${song.short} plays as it is, with ${repo.short}'s drums on top and its graph on lead, in the song's tempo and key.`;
   }
   for (const button of document.querySelectorAll('[data-genre]')) {
     const deck = Number(button.dataset.deck);
@@ -1548,14 +1576,14 @@ function syncMixer() {
   for (const button of document.querySelectorAll('[data-lead]')) {
     button.setAttribute('aria-pressed', String(button.dataset.lead === settings.lead));
     if (button.dataset.lead === 'auto') {
-      const leads = world ? [...new Set(world.graphs.map((g) => LEADS[g.set.codeLead].name))] : [];
+      const leads = world ? [...new Set(world.graphs.filter((g) => !g.scene.song).map((g) => LEADS[g.set.codeLead].name))] : [];
       button.lastChild.textContent = leads.length ? `From the code · ${leads.join(' / ')}` : 'From the code';
     }
   }
   for (const button of document.querySelectorAll('[data-part]')) {
     const from = Number(button.dataset.from);
     button.setAttribute('aria-pressed', String(settings.mash[button.dataset.part] === from));
-    if (battle) button.lastChild.textContent = world.graphs[from].short;
+    if (battle && !songMash) button.lastChild.textContent = world.graphs[from].short;
   }
   for (const channel of CHANNELS) {
     const row = document.querySelector(`.inst[data-channel="${channel.id}"]`);
@@ -1572,7 +1600,11 @@ function syncMixer() {
 
 // What a channel plays, for each deck.
 function channelNote(id) {
-  const words = world ? [...new Set(world.graphs.map((g) => describeChannel(id, g.set)))] : [];
+  if (id === 'song') {
+    return world && world.graphs.some((g) => g.scene.song) ? 'your song, as it is: never stretched or re-pitched'
+      : 'plays when a song joins the battle';
+  }
+  const words = world ? [...new Set(world.graphs.filter((g) => !g.scene.song).map((g) => describeChannel(id, g.set)))] : [];
   return words.length > 1 ? `A: ${words[0]} · B: ${words[1]}` : words[0] || '';
 }
 
@@ -1580,7 +1612,15 @@ function renderAbout() {
   if (!world) return;
   const items = [];
   const add = (text, head = false) => items.push(Object.assign(document.createElement('li'), { textContent: text, className: head ? 'about-head' : '' }));
-  if (world.battle) {
+  const song = world.graphs.find((g) => g.scene.song);
+  if (world.battle && song) {
+    const repo = world.graphs.find((g) => g !== song);
+    add('The battle', true);
+    add(`${repo.short} plays ${GENRES[repo.set.genre].name} at ${repo.set.bpm} BPM; ${song.short} answers as it is, at `
+      + `${song.set.bpm.toFixed(1)} BPM. They take eight-bar rounds, and every kick and clap throws a punch, the song's own beats included.`);
+    add(`Press D to sync: they trade bars, then half bars, beats and eighths, with ${repo.short} at the song's tempo and `
+      + `moving into its key. Then they drop together: ${song.short} as it is, with ${repo.short}'s drums on top and its graph on lead.`);
+  } else if (world.battle) {
     const [a, b] = world.graphs;
     const mash = music.mash;
     const from = (part) => world.graphs[settings.mash[part]].short;
@@ -1601,6 +1641,10 @@ function renderAbout() {
   }
   for (const g of world.graphs) {
     const prefix = world.battle ? `${g.short}: ` : '';
+    if (g.scene.song) {
+      add(`${prefix}each bar lights up its four beats as it plays, and the caption shows where you are in the song.`);
+      continue;
+    }
     add(g.scene.commits.length
       ? `${prefix}the last ${g.scene.commits.length} commits drop in order, one per bar in a drop. The code each one touched fires as a riff, and the camera cuts to it.`
       : `${prefix}there are no commits to replay, so the biggest hubs take the riffs.`);
@@ -1622,8 +1666,10 @@ function showCommitCaption(graph, commit, number, section) {
     $('#caption-tag').textContent = world && world.battle ? `${graph.short} · ${doing}` : doing;
     caption.dataset.deck = String(graph.index);
     $('#caption-msg').textContent = commit.m || '(no message)';
-    $('#caption-meta').textContent = [commit.a, relativeTime(commit.t), `${commit.f} file${commit.f === 1 ? '' : 's'}`,
-      `${number} of ${graph.scene.commits.length}`].filter(Boolean).join('  ·  ');
+    $('#caption-meta').textContent = graph.scene.song
+      ? [`♪ ${graph.short}`, `bar ${number} of ${graph.scene.commits.length}`].join('  ·  ')
+      : [commit.a, relativeTime(commit.t), `${commit.f} file${commit.f === 1 ? '' : 's'}`,
+        `${number} of ${graph.scene.commits.length}`].filter(Boolean).join('  ·  ');
     caption.classList.remove('fading');
   }, 180);
 }
@@ -1691,7 +1737,7 @@ async function begin(scenes) {
   await sleep(50);  // let that message paint before the layout warms up
 
   if (scenes.length > 1) scenes = scenes.map((s) => trimScene(s, BATTLE_NODES));
-  const sets = scenes.map((scene, i) => deriveSet(scene, genreChoice(i), settings.lead));
+  const sets = scenes.map((scene, i) => setFor(scene, i));
   music.mashParts = { ...settings.mash };
   music.configure(sets, mixFor(sets));
   world = new Show(scenes, sets);
@@ -1712,6 +1758,9 @@ function setupDecks(incoming = -1) {
     if (!g) continue;
     if (k === incoming) {
       $(sel).replaceChildren('???');
+      $(sel).removeAttribute('href');
+    } else if (g.scene.song) {
+      $(sel).replaceChildren(`♪ ${g.short}`);
       $(sel).removeAttribute('href');
     } else {
       $(sel).replaceChildren(`${g.scene.repo.owner}/`, document.createElement('wbr'), g.scene.repo.name);  // wrap after the slash
@@ -1825,6 +1874,7 @@ function renderRecent() {
     button.className = entry.b ? 'chip pair' : 'chip';
     button.textContent = entry.b ? `${shortUrl(entry.a)}  vs  ${shortUrl(entry.b)}` : shortUrl(entry.a);
     button.addEventListener('click', () => {
+      if (entry.b) pickStartSong(null);
       $('#repo-url').value = entry.a;
       $('#repo-url-b').value = entry.b || '';
       updateGoButton();
@@ -1836,7 +1886,25 @@ function renderRecent() {
 }
 
 function updateGoButton() {
-  $('#go').textContent = $('#repo-url-b').value.trim() ? 'Battle' : 'Drop it';
+  $('#go').textContent = startSong || $('#repo-url-b').value.trim() ? 'Battle' : 'Drop it';
+}
+
+// A song for the second deck, picked or dropped on the start screen.
+let startSong = null;
+
+function pickStartSong(file) {
+  if (file && !isSongFile(file)) {
+    showError(`${file.name} doesn't look like a song. Try an MP3, WAV, M4A, OGG or FLAC.`);
+    return;
+  }
+  showError('');
+  startSong = file || null;
+  $('#repo-url-b').hidden = Boolean(startSong);
+  $('#song-pick').hidden = Boolean(startSong);
+  $('#song-chip').hidden = !startSong;
+  if (startSong) $('#song-name').textContent = `♪ ${songTitle(startSong.name)}`;
+  $('#song-file').value = '';
+  updateGoButton();
 }
 
 function fail(err) {
@@ -1892,30 +1960,40 @@ const announcer = {
 if (speech) speech.addEventListener('voiceschanged', () => announcer.pickVoice());
 
 // ---------------------------------------------------------------------------
-// A new contender: a repo added while the set plays. Claude cooks it (the server builds its
+// A new contender: a repo (or a song) added while the set plays. Meta cooks it (the server builds its
 // scene while the music carries on), then it's announced and slams in as a deck of its own:
 // beside a solo deck, or in place of whichever deck is behind in a battle (winner stays on).
 
-let cooking = null;  // the repo on its way in, from when it's asked for until it lands
+let cooking = null;  // the repo or song on its way in, from when it's asked for until it lands
 let cookingTimer = null;
 
-async function addContender(url) {
-  url = String(url || '').trim();
-  if (!world || cooking || !url) return;
+// `source` is a repo URL, or an audio file to battle as a song.
+async function addContender(source) {
+  const file = source instanceof Blob ? source : null;
+  const url = file ? '' : String(source || '').trim();
+  if (!world || cooking || (!file && !url)) return;
   const show = world;
-  const order = { name: shortUrl(url) };
+  const order = { name: file ? `♪ ${songTitle(file.name)}` : shortUrl(url) };
   cooking = order;
   const alive = () => cooking === order && world === show;
   const started = performance.now();
   showCooking(order.name, 'Getting ready');
-  announcer.say('Claude is cooking!');
+  announcer.say('Meta is cooking!');
   try {
-    const { job } = await postJSON('/api/build', { url });
-    const scenes = await waitForJobs([job], [order.name], (steps) => alive() && showCooking(order.name, steps[0]), alive);
-    if (!scenes || !alive()) return;
-    const scene = trimScene(scenes[0], BATTLE_NODES);
-    const slot = show.battle ? (show.balance >= 0 ? 1 : 0) : 1;
-    const graph = new Graph(show, scene, deriveSet(scene, genreChoice(slot), settings.lead), slot, false);
+    let scene;
+    if (file) {
+      scene = await loadSongScene(file, (step) => alive() && showCooking(order.name, step));
+    } else {
+      const { job } = await postJSON('/api/build', { url });
+      const scenes = await waitForJobs([job], [order.name], (steps) => alive() && showCooking(order.name, steps[0]), alive);
+      if (!scenes) return;
+      scene = trimScene(scenes[0], BATTLE_NODES);
+    }
+    if (!alive()) return;
+    // A song only ever fights a repo: a new song takes over from one already playing.
+    const songAt = show.graphs.findIndex((g) => g.scene.song);
+    const slot = file && songAt >= 0 ? songAt : show.battle ? (show.balance >= 0 ? 1 : 0) : 1;
+    const graph = new Graph(show, scene, setFor(scene, slot), slot, false);
     showCooking(graph.name, 'Plating up');
     while (!graph.settle(5)) {  // a few milliseconds at a time, so the music never stutters
       await sleep(10);
@@ -1936,7 +2014,7 @@ async function addContender(url) {
 function showCooking(name, step, failed = false) {
   clearTimeout(cookingTimer);
   cookingBox.classList.toggle('burnt', failed);
-  $('#cooking-title').textContent = failed ? `Couldn't cook ${name}` : 'Claude is cooking';
+  $('#cooking-title').textContent = failed ? `Couldn't cook ${name}` : 'Meta is cooking';
   $('#cooking-step').textContent = failed ? step : `${name} · ${step}`;
   cookingBox.hidden = false;
   if (failed) cookingTimer = setTimeout(hideCooking, 10000);
@@ -1960,10 +2038,12 @@ function stopCooking() {
 // What adding a repo will do right now.
 function addNote() {
   if (!world) return '';
-  if (cooking) return `Claude is already cooking ${cooking.name}. One at a time.`;
+  if (cooking) return `Meta is already cooking ${cooking.name}. One at a time.`;
   if (!world.battle) return `It battles ${world.graphs[0].short}.`;
   const loser = world.graphs[world.balance >= 0 ? 1 : 0];
-  return `Winner stays on: when it lands, whoever is behind on the meter makes way. Right now that's ${loser.short}.`;
+  const song = world.graphs.find((g) => g.scene.song);
+  return `Winner stays on: when it lands, whoever is behind on the meter makes way. Right now that's ${loser.short}.`
+    + (song ? ` A new song takes over from ${song.short}.` : '');
 }
 
 // The build-up before a newcomer lands: the HUD makes room, and the title card and the
@@ -1971,8 +2051,9 @@ function addNote() {
 function contenderArrives(c) {
   setupDecks(c.slot);
   const g = c.graph;
-  $('#contender-name').textContent = g.name;
-  $('#contender-meta').textContent = [`${GENRES[g.set.genre].name} · ${g.set.bpm} BPM`, `vs ${c.champion.short}`,
+  $('#contender-name').textContent = g.scene.song ? `♪ ${g.name}` : g.name;
+  const sound = g.scene.song ? `${NOTE_NAMES[g.set.key]} ${g.set.modeName}` : GENRES[g.set.genre].name;
+  $('#contender-meta').textContent = [`${sound} · ${Math.round(g.set.bpm)} BPM`, `vs ${c.champion.short}`,
     c.loser ? `${c.loser.short} is out` : ''].filter(Boolean).join('  ·  ');
   contenderBox.className = 'contender';
   contenderBox.hidden = false;
@@ -1991,7 +2072,7 @@ function contenderNamed(c) {
 function contenderLanded() {
   cooking = null;
   setupDecks();
-  remember({ a: world.graphs[0].scene.repo.url, b: world.graphs[1].scene.repo.url });
+  if (!world.graphs.some((g) => g.scene.song)) remember({ a: world.graphs[0].scene.repo.url, b: world.graphs[1].scene.repo.url });
   contenderBox.classList.add('blast');
   setTimeout(() => {
     if (contenderBox.classList.contains('blast')) contenderBox.hidden = true;
@@ -2029,7 +2110,7 @@ function publish() {
       battle: Boolean(world && world.battle),
       incoming: Boolean(world && world.incoming),
       decks: world ? world.graphs.map((g) => ({
-        name: g.name, short: g.short, label: g.set.label, genre: g.set.genre, lead: g.set.lead,
+        name: g.name, short: g.short, label: g.set.label, genre: g.set.genre, lead: g.set.lead, song: Boolean(g.scene.song),
         codeLead: g.set.codeLead, repoGenre: g.repoGenre, waiting: Boolean(g.waiting),
       })) : [],
       settings: {
@@ -2101,9 +2182,10 @@ const DECK_COMMANDS = {
   flashes: (on) => setFlashes(on),
   announcer: (on) => setAnnouncer(on),
   add: (url) => typeof url === 'string' && addContender(url),
+  addSong: (file) => file instanceof Blob && addContender(file),
   stopCooking: () => stopCooking(),
 };
-const NEEDS_A_SET = new Set(['drop', 'genre', 'lead', 'mash', 'channel', 'reset', 'add', 'stopCooking']);
+const NEEDS_A_SET = new Set(['drop', 'genre', 'lead', 'mash', 'channel', 'reset', 'add', 'addSong', 'stopCooking']);
 
 if (deckLink) {
   deckLink.addEventListener('message', ({ data }) => {
@@ -2195,8 +2277,12 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 $('#repo-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  const urls = [$('#repo-url').value.trim(), $('#repo-url-b').value.trim()].filter(Boolean);
-  if (!urls.length) return;
+  const song = startSong;
+  const urls = [$('#repo-url').value.trim(), song ? '' : $('#repo-url-b').value.trim()].filter(Boolean);
+  if (!urls.length) {
+    if (song) showError('Paste a repo for your song to battle.');
+    return;
+  }
   music.unlock();  // this click is what allows the page to make sound
   showError('');
   $('#step').textContent = 'Getting ready';
@@ -2204,13 +2290,39 @@ $('#repo-form').addEventListener('submit', async (event) => {
   showScreen('progress');
   try {
     const refresh = $('#refresh').checked;
+    // The repos build on the server while the song is listened to here.
+    let heard = song ? 'Getting ready' : '';
+    const listening = song ? loadSongScene(song, (step) => (heard = step)) : null;
+    if (listening) listening.catch(() => {});  // reported below, once the repos are done
     const jobs = await Promise.all(urls.map((url) => postJSON('/api/build', { url, refresh })));
-    const scenes = await waitForJobs(jobs.map((j) => j.job), urls.map(shortUrl));
+    const report = (steps, logs) => showProgress(song ? [...steps, `♪ ${songTitle(song.name)}: ${heard}`] : steps, logs);
+    const scenes = await waitForJobs(jobs.map((j) => j.job), urls.map(shortUrl), report);
+    if (song) scenes.push(await listening);
     remember(urls[1] ? { a: urls[0], b: urls[1] } : { a: urls[0] });
     await begin(scenes);
   } catch (err) {
     fail(err);
   }
+});
+$('#song-file').addEventListener('change', (e) => pickStartSong(e.target.files[0]));
+$('#song-clear').addEventListener('click', () => pickStartSong(null));
+$('#add-song').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file || cooking) return;
+  closePanels();
+  addContender(file);
+});
+// Drop an audio file anywhere: on the start screen it's the second deck, during a set it's a contender.
+window.addEventListener('dragover', (e) => {
+  if ([...(e.dataTransfer?.items || [])].some((i) => i.kind === 'file')) e.preventDefault();
+});
+window.addEventListener('drop', (e) => {
+  const file = [...(e.dataTransfer?.files || [])].find(isSongFile);
+  if (!file) return;
+  e.preventDefault();
+  if (world) addContender(file);
+  else if (!$('#intro').hidden) pickStartSong(file);
 });
 $('#repo-url-b').addEventListener('input', updateGoButton);
 

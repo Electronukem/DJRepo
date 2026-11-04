@@ -18,7 +18,7 @@
     <h1>DJRepo</h1>
     <p class="lede">
       Paste a GitHub repository. graphify maps its code, your commits become the set,
-      and the whole thing builds up and drops. Add a second repo and they battle.
+      and the whole thing builds up and drops. Add a second repo, or a song, and they battle.
     </p>
     <form id="repo-form" autocomplete="off">
       <div class="deck-inputs">
@@ -27,6 +27,14 @@
         <span class="vs-tag" aria-hidden="true">VS</span>
         <label for="repo-url-b" class="sr-only">A second repository to battle (optional)</label>
         <input id="repo-url-b" name="url-b" type="text" inputmode="url" placeholder="a second repo to battle (optional)" spellcheck="false">
+        <span id="song-chip" class="song-chip" hidden>
+          <span id="song-name"></span>
+          <button id="song-clear" type="button" aria-label="Battle a repo instead of this song" title="Remove the song">×</button>
+        </span>
+        <label id="song-pick" class="song-pick" title="Battle a song instead of a second repo. It never leaves your browser.">
+          ♪ or a song
+          <input id="song-file" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.aif,.aiff" hidden>
+        </label>
       </div>
       <div class="go-row">
         <button id="go" type="submit">Drop it</button>
@@ -43,7 +51,7 @@
     <div id="recent" class="recent" hidden></div>
     <p id="error" class="error" role="alert" hidden></p>
     <div id="notice" class="notice" hidden></div>
-    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo, X opens the mixer,
+    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo or a song, X opens the mixer,
       C puts the controls in their own window, F is full screen and M is mute.</p>
   </main>
 
@@ -165,7 +173,7 @@
       <div id="cooking" class="cooking" role="status" hidden>
         <span class="flames" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="cooking-text">
-          <span id="cooking-title" class="cooking-title">Claude is cooking</span>
+          <span id="cooking-title" class="cooking-title">Meta is cooking</span>
           <span id="cooking-step" class="cooking-step"></span>
         </span>
         <button id="cooking-close" class="icon cooking-close" type="button" aria-label="Stop waiting for this repo" title="Stop">
@@ -196,6 +204,8 @@
           <input id="add-url" type="text" inputmode="url" placeholder="github.com/owner/repository" spellcheck="false" required>
           <button id="add-go" class="drop-button" type="submit">Bring it</button>
         </div>
+        <p class="add-or">or <label class="file-link">bring in a song<input id="add-song" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.opus,.flac,.aif,.aiff" hidden></label>
+          (or drop one on the page). It never leaves your browser.</p>
       </form>
     </aside>
 
@@ -210,6 +220,7 @@
       <section id="mashup" hidden>
         <h2>Mashup <span>who brings what to the drop you make together</span></h2>
         <div id="mash-rows"></div>
+        <p id="mash-song" class="mash-song" hidden></p>
       </section>
       <section>
         <h2>Lead synth <span>plays the graph</span></h2>
@@ -280,6 +291,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="genres.js"></script>
   <script src="dj.js"></script>
+  <script src="song.js"></script>
   <script src="app.js"></script>
   <script src="sample.js"></script>
   <script src="gigs.js"></script>

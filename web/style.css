@@ -685,7 +685,7 @@ body[data-section="break"] #section { color: #a9e8ff; }
 
 /* ---- a new contender ---- */
 
-/* Claude is cooking: a repo on its way in, in a row of its own under the HUD */
+/* Meta is cooking: a repo on its way in, in a row of its own under the HUD */
 .cooking {
   grid-column: 1 / -1;
   justify-self: center;
@@ -907,6 +907,54 @@ body[data-section="break"] #section { color: #a9e8ff; }
 /* ---- finding a gig ---- */
 
 .go-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+
+/* a song for the second deck */
+.song-pick {
+  flex-shrink: 0;
+  padding: 13px 16px;
+  border: 1px dashed rgba(63, 210, 255, 0.5);
+  border-radius: 999px;
+  color: #c2f0ff;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.song-pick:hover, .song-pick:focus-within { background: rgba(63, 210, 255, 0.1); border-color: var(--cool); }
+
+.song-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px 9px 20px;
+  border: 1px solid var(--cool);
+  border-radius: 999px;
+  background: rgba(63, 210, 255, 0.1);
+  box-shadow: 0 0 20px rgba(63, 210, 255, 0.2);
+}
+
+#song-name { overflow: hidden; color: #c2f0ff; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+
+#song-clear {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.add-or { margin: 10px 0 0; color: var(--muted); font-size: 12.5px; }
+.file-link { color: var(--cool); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.file-link:focus-within { outline: 2px solid var(--cool); outline-offset: 2px; }
+.mash-song { margin: 0; color: var(--muted); font-size: 13px; }
 .gig-button { padding: 12px 20px; font-size: 13.5px; }
 .gig-button svg { width: 17px; height: 17px; }
 
