@@ -22,7 +22,8 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from common import CACHE_DIR, INSTALL_HINT, JOBS, WEB_DIR, BuildError, Job, graphify_command, rmtree, start_job, \
+import gigs
+from common import CACHE_DIR, INSTALL_HINT, JOBS, ROOT, WEB_DIR, BuildError, Job, graphify_command, rmtree, start_job, \
     stream, summarize_graph
 
 SCENE_VERSION = 1
@@ -364,6 +365,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "graphify": graphify_command() is not None,
                 "git": shutil.which("git") is not None,
                 "install": INSTALL_HINT,
+                "keys": gigs.keys(),
             })
         elif path.startswith("/api/job/"):
             job = JOBS.get(path.rsplit("/", 1)[-1])
@@ -391,6 +393,12 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({"error": str(exc)}, 400)
             return
 
+        if self.path == "/api/gigs":
+            self._gigs(body)
+            return
+        if self.path == "/api/pitch":
+            self._pitch(body)
+            return
         if self.path != "/api/build":
             self._json({"error": "Not found."}, 404)
             return
@@ -405,6 +413,36 @@ class Handler(SimpleHTTPRequestHandler):
                         lambda job: build_scene(job, owner, repo, branch, refresh, max_nodes))
         self._json({"job": job.id})
 
+    def _gigs(self, body: dict) -> None:
+        """Upcoming electronic events near a point or in a city."""
+        try:
+            lat = float(body["lat"]) if body.get("lat") is not None else None
+            lon = float(body["lon"]) if body.get("lon") is not None else None
+            if lat is not None and not (-90 <= lat <= 90 and -180 <= (lon or 0) <= 180):
+                raise ValueError
+            events, place = gigs.find_gigs(str(body.get("city") or "")[:80], lat, lon, int(body.get("radius") or 50),
+                                           str(body.get("unit") or "miles"))
+        except (TypeError, ValueError):
+            self._json({"error": "That location didn't make sense."}, 400)
+            return
+        except BuildError as exc:
+            self._json({"error": str(exc)}, 502)
+            return
+        self._json({"events": events, "place": place})
+
+    def _pitch(self, body: dict) -> None:
+        """Research an event and write a booking email for it, in the background."""
+        event, profile, clips = body.get("event"), body.get("profile"), body.get("clips")
+        if not (isinstance(event, dict) and isinstance(profile, dict) and isinstance(clips, dict) and event.get("id")):
+            self._json({"error": "Expected an event, a profile and the clips."}, 400)
+            return
+        if not str(profile.get("name") or "").strip():
+            self._json({"error": "Add your name first, so the email can be signed."}, 400)
+            return
+        fingerprint = json.dumps([profile, sorted(clips)], sort_keys=True)
+        job = start_job(("pitch", str(event["id"]), fingerprint), lambda job: gigs.pitch(job, event, profile, clips))
+        self._json({"job": job.id})
+
     def _json(self, payload: dict, status: int = 200) -> None:
         data = json.dumps(payload).encode("utf-8")
         self.send_response(status)
@@ -414,15 +452,30 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
 
+def load_env(path: Path) -> None:
+    """KEY=value lines from a .env file, for anything not already set in the environment."""
+    try:
+        lines = path.read_text("utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        key, sep, value = line.strip().partition("=")
+        if sep and key and not key.startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def main() -> None:
+    load_env(ROOT / ".env")
     parser = argparse.ArgumentParser(description="Turn a GitHub repository into an EDM set with a light show.")
     parser.add_argument("--port", type=int, default=8777)
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="address to listen on (default 127.0.0.1, this machine only; the Docker image uses 0.0.0.0)")
     parser.add_argument("--max-nodes", type=int, default=DEFAULT_MAX_NODES,
                         help=f"largest graph to animate (default {DEFAULT_MAX_NODES})")
     parser.add_argument("--no-browser", action="store_true", help="don't open a browser tab")
     args = parser.parse_args()
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
     server.max_nodes = max(50, args.max_nodes)
     url = f"http://127.0.0.1:{args.port}/"
     print(f"DJRepo is running at {url}  (Ctrl+C to stop)")
@@ -430,6 +483,9 @@ def main() -> None:
         print(f"  graphify isn't installed yet. Run:  {INSTALL_HINT}")
     if shutil.which("git") is None:
         print("  git isn't on PATH; it's needed to clone repositories.")
+    missing = [k for k, ok in (("TICKETMASTER_API_KEY", gigs.keys()["events"]), ("MODEL_API_KEY", gigs.keys()["meta"])) if not ok]
+    if missing:
+        print(f"  The gig finder needs {' and '.join(missing)} in .env (see .env.example).")
     if not args.no_browser:
         threading.Timer(0.6, webbrowser.open, (url,)).start()
     try:

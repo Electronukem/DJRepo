@@ -1,0 +1,161 @@
+/* The control deck: DJRepo's controls in a window of their own. Builds on style.css. */
+
+html, body.deck { height: auto; min-height: 100%; overflow: auto; }
+
+body.deck {
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(255, 63, 164, 0.16), transparent 55%),
+    radial-gradient(ellipse at 90% 0%, rgba(63, 210, 255, 0.12), transparent 50%),
+    var(--bg);
+}
+
+.deck-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(520px, 100%);
+  margin: 0 auto;
+  padding: 18px 16px 28px;
+}
+
+.d-offline {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--warn-line);
+  border-radius: 12px;
+  background: rgba(255, 200, 120, 0.06);
+  color: var(--warn-ink);
+  font-size: 13px;
+}
+
+body.deck.idle-show .d-card,
+body.deck.idle-show .d-transport { opacity: 0.5; pointer-events: none; }
+
+.d-head { text-align: center; }
+
+.d-decks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.d-name {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 17px;
+  overflow-wrap: break-word;
+}
+
+body.deck.battle .d-name.a { color: #ffc2e2; }
+body.deck.battle .d-name.b { color: #c2f0ff; }
+body.deck.battle[data-deck="1"] .d-name.a,
+body.deck.battle[data-deck="0"] .d-name.b { opacity: 0.5; }
+
+.d-vs { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+.d-vs .meter { width: 110px; height: 8px; }
+
+#d-meter-a {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 50%;
+  background: linear-gradient(90deg, #b51f6f, var(--hot));
+  transition: width 0.25s ease-out;
+}
+
+.d-mood { margin: 6px 0 0; color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+
+.d-now {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.d-now-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+#d-section {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.deck[data-section="drop"] #d-section { color: #ffe066; text-shadow: 0 0 18px rgba(255, 63, 164, 0.8); }
+body.deck[data-section="build"] #d-section { color: #ff9fd2; }
+body.deck[data-section="break"] #d-section { color: #a9e8ff; }
+
+#d-beats { display: flex; gap: 6px; }
+#d-beats span { width: 11px; height: 11px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
+#d-beats span.on { background: var(--hot); box-shadow: 0 0 10px var(--hot); }
+#d-beats span:first-child.on { background: #ffe066; box-shadow: 0 0 12px #ffe066; }
+
+.d-phrase { height: 4px; margin: 12px 0 10px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+
+#d-phrase-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cool), var(--hot));
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+#d-soon, #d-bpm { margin: 0; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+.d-transport { display: flex; align-items: center; gap: 12px; }
+
+.d-drop {
+  flex: 1;
+  padding: 18px 20px;
+  font-size: 18px;
+  letter-spacing: 0.12em;
+}
+
+.d-drop:disabled { opacity: 0.4; cursor: default; }
+
+#d-sound .cross { display: none; }
+#d-sound.muted .cross { display: inline; }
+#d-sound.muted .waves { display: none; }
+#d-volume { width: 120px; accent-color: var(--hot); }
+
+.d-card {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.d-card > h2 {
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#d-add-url {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+
+#d-add-url:focus { border-color: var(--cool); box-shadow: 0 0 0 3px rgba(63, 210, 255, 0.15); }
+#d-add-go:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+
+.d-cooking { margin-top: 12px; justify-self: auto; width: fit-content; max-width: 100%; }
+
+.deck .hint { margin: 4px 0 0; text-align: center; }

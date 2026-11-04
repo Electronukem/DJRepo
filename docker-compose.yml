@@ -1,0 +1,14 @@
+# docker compose up --build   then open http://localhost:8777
+services:
+  djrepo:
+    build: .
+    ports:
+      - "127.0.0.1:8777:8777"  # this machine only
+    env_file:
+      - path: .env  # TICKETMASTER_API_KEY and MODEL_API_KEY for the gig finder; the set needs neither
+        required: false
+    volumes:
+      - djrepo-cache:/app/.cache  # repos you've played open instantly next time
+
+volumes:
+  djrepo-cache:

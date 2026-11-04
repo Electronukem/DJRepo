@@ -5,6 +5,7 @@
 // playing leans in while the other backs off. Asked to sync, they circle closer and closer as they
 // trade turns, spiral together through the build-up, and land as one graph in one big drop.
 // Commits drop on the bar as riffs, and light travelling along the edges plays the lead.
+// A repo added mid-set is cooked while the music plays, announced, and slams in as a new deck.
 // Shares the page's global scope with genres.js (GENRES, genreColour, genreSwatch) and dj.js
 // (DJ, CHANNELS, LEADS, SECTIONS, deriveSet, defaultMix, clamp, hashString, ...), so top-level
 // names here must not repeat those.
@@ -20,6 +21,7 @@ const SETTINGS_KEY = 'djrepo.settings';
 const RTF = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 const STAR_COUNT = 240;
 const BATTLE_NODES = 900;  // per graph, so two stay smooth
+const COOK_AT_LEAST = 2600;  // ms the cooking banner stays up, even for a repo that's already cached
 const MASH_PARTS = [['drums', 'Drums'], ['bass', 'Bass'], ['chords', 'Chords & arpeggio']];
 const IDLE_POSITION = {
   section: 'intro', stage: 'solo', round: 0, progress: 0, barF: 0, bar: 0, beats: 0, beatInBar: 0, phraseBar: 0,
@@ -29,6 +31,8 @@ const IDLE_POSITION = {
 const music = new DJ();
 const sky = $('#sky');
 const g2 = sky.getContext('2d');
+const cookingBox = $('#cooking');
+const contenderBox = $('#contender');
 const view = { w: 0, h: 0, dpr: 1 };
 const settings = loadSettings();
 let health = null;
@@ -42,7 +46,8 @@ let hud = {};
 // One repository's graph
 
 class Graph {
-  constructor(show, scene, set, index) {
+  // `warm` settles the layout straight away; without it, call settle() a little at a time.
+  constructor(show, scene, set, index, warm = true) {
     this.show = show;
     this.scene = scene;
     this.set = set;
@@ -63,13 +68,6 @@ class Graph {
       twinkle: Math.random() * TAU,
       sx: 0, sy: 0, glow: 0,
     }));
-    this.adj = this.nodes.map(() => []);
-    for (const [s, t] of scene.links) {
-      this.adj[s].push(t);
-      this.adj[t].push(s);
-    }
-    let total = 0;
-    this.cumulative = this.nodes.map((n) => (total += Math.sqrt(n.d + 1)));
 
     this.layoutAnchors();
     const sizes = scene.communities.map((c) => c.size);
@@ -79,21 +77,9 @@ class Graph {
       n.x = a.x + gaussian() * spread;
       n.y = a.y + gaussian() * spread;
     }
-
-    this.links = scene.links.map(([source, target]) => ({ source, target }));
-    this.sim = d3.forceSimulation(this.nodes)
-      .force('link', d3.forceLink(this.links).distance((l) => 10 + l.source.r + l.target.r))
-      .force('charge', d3.forceManyBody().strength((n) => -8 - n.r * 3).distanceMax(240).theta(0.95))
-      .force('home', () => this.pullHome())
-      .velocityDecay(0.45)
-      .alphaDecay(0.025)
-      .alphaTarget(0.05)  // never settles, so it keeps moving
-      .stop();
-    const warmup = this.nodes.length > 1000 ? 90 : 160;
-    for (let i = 0; i < warmup; i++) this.sim.tick();
-
-    this.linksBy = this.palette.map(() => []);
-    for (const l of this.links) this.linksBy[l.source.c].push(l);
+    this.wire();
+    this.warmup = this.nodes.length > 1000 ? 90 : 160;
+    if (warm) this.settle(Infinity);
 
     this.flashes = [];
     this.rings = [];
@@ -108,6 +94,53 @@ class Graph {
       ox: view.w / 2, oy: view.h / 2, radius: Math.min(view.w, view.h) * 0.44, alpha: 1, push: 0.55,
       x: 0, y: 0, scale: 1, zoom: 1, angle: index ? Math.PI : 0, tilt: 0, focusMix: 0,
     };
+  }
+
+  // The edges, and the force simulation that keeps the graph moving.
+  wire() {
+    this.adj = this.nodes.map(() => []);
+    for (const [s, t] of this.scene.links) {
+      this.adj[s].push(t);
+      this.adj[t].push(s);
+    }
+    let total = 0;
+    this.cumulative = this.nodes.map((n) => (total += Math.sqrt(n.d + 1)));
+    this.links = this.scene.links.map(([source, target]) => ({ source, target }));
+    this.sim = d3.forceSimulation(this.nodes)
+      .force('link', d3.forceLink(this.links).distance((l) => 10 + l.source.r + l.target.r))
+      .force('charge', d3.forceManyBody().strength((n) => -8 - n.r * 3).distanceMax(240).theta(0.95))
+      .force('home', () => this.pullHome())
+      .velocityDecay(0.45)
+      .alphaDecay(0.025)
+      .alphaTarget(0.05)  // never settles, so it keeps moving
+      .stop();
+    this.linksBy = this.palette.map(() => []);
+    for (const l of this.links) this.linksBy[l.source.c].push(l);
+  }
+
+  // Let the layout settle for up to `budget` ms; true once it has.
+  settle(budget) {
+    const until = performance.now() + budget;
+    while (this.warmup > 0 && performance.now() < until) {
+      this.sim.tick();
+      this.warmup--;
+    }
+    return this.warmup <= 0;
+  }
+
+  // Keep only the `max` most connected nodes (a battle's size), leaving the rest where they are.
+  trim(max) {
+    if (this.nodes.length <= max) return;
+    const kept = (n) => n.i < max;
+    this.scene = trimScene(this.scene, max);
+    this.nodes = this.nodes.slice(0, max);
+    this.flashes = this.flashes.filter((f) => kept(f.node));
+    this.rings = this.rings.filter((r) => kept(r.node));
+    this.labels = this.labels.filter((l) => kept(l.node));
+    this.pulses = this.pulses.filter((p) => kept(p.from) && kept(p.to));
+    this.focusNodes = null;
+    this.fit = null;
+    this.wire();
   }
 
   applyPalette(genre) {
@@ -419,6 +452,8 @@ class Show {
   constructor(scenes, sets) {
     this.graphs = scenes.map((scene, i) => new Graph(this, scene, sets[i], i));
     this.battle = this.graphs.length > 1;
+    this.incoming = null;  // a new contender on its way in
+    this.leaving = [];     // knocked-out graphs, spinning away
     this.slots = new Set();
     this.waves = [];
     this.attacks = [];
@@ -446,9 +481,11 @@ class Show {
     this.frames++;
     const pos = music.position(t) || IDLE_POSITION;
     this.pos = pos;
+    this.admit(t, pos);
+    const live = this.graphs.filter((g) => !g.waiting);
     this.pal = typeof pos.deck === 'number' ? this.graphs[pos.deck].palette : this.blendedPalette();
     this.react(t, pos);
-    for (const g of this.graphs) {
+    for (const g of live) {
       g.moveAnchors(t);
       // Two graphs take turns to settle, frame by frame, so the pair costs about the same as one.
       const turn = this.battle ? this.frames % 2 === g.index : g.nodes.length < 1200 || this.frames % 2 === 0;
@@ -456,9 +493,9 @@ class Show {
       g.recoil *= Math.exp(-dt * 5);
     }
     this.layout(t, dt, pos);
-    for (const g of this.graphs) g.project(this.sx, this.sy);
+    for (const g of live) g.project(this.sx, this.sy);
     this.ambient(t, pos);
-    for (const g of this.graphs) {
+    for (const g of live) {
       g.updatePulses(t);
       g.updateGlow(t);
     }
@@ -470,7 +507,8 @@ class Show {
     this.drawLasers(pos);
     this.drawDivider(t, pos);
     // The deck on the attack is drawn on top.
-    for (const g of [...this.graphs].sort((a, b) => a.v.alpha - b.v.alpha)) g.draw(t, pos);
+    for (const g of [...live].sort((a, b) => a.v.alpha - b.v.alpha)) g.draw(t, pos);
+    this.drawLeaving(t, dt, pos);
     this.drawAttacks(t);
     this.drawArcs(t);
     this.drawWaves(t);
@@ -595,6 +633,7 @@ class Show {
     const side0 = Math.floor(pos.beats) % 2 ? 1 : -1;
 
     for (const g of this.graphs) {
+      if (g.waiting) continue;  // a newcomer in the wings, until it slams in
       const v = g.v;
       if (!g.fit || this.frames % 12 === g.index * 6) g.measure();
       let ox = w / 2;
@@ -677,6 +716,89 @@ class Show {
   mixedHue() {
     const [a, b] = this.graphs.map((g) => g.genre.bg);
     return b === undefined ? a : (a + (((b - a + 540) % 360) - 180) / 2 + 360) % 360;
+  }
+
+  // ---- a new contender ----
+
+  // A newcomer takes a deck: beside a solo deck, or in place of a battle's loser. The music
+  // builds up from the next bar, and admit() brings it on stage in time with it.
+  challenge(graph) {
+    const slot = graph.index;
+    const { bar, drop } = music.challenge(graph.set, slot);
+    this.incoming = {
+      graph, slot, bar, drop, stage: 'ordered',
+      champion: this.graphs[1 - slot],
+      loser: this.battle ? this.graphs[slot] : null,
+    };
+  }
+
+  // At the build-up the loser is knocked out and the title card goes up; two bars later the
+  // newcomer is named; on the drop it slams in.
+  admit(t, pos) {
+    const c = this.incoming;
+    if (!c) return;
+    if (c.stage === 'ordered' && pos.bar >= c.bar) {
+      c.stage = 'build';
+      if (c.loser) this.knockOut(c.loser, t);
+      c.graph.waiting = true;
+      this.graphs[c.slot] = c.graph;
+      this.battle = true;
+      this.balance = 0;
+      contenderArrives(c);
+    }
+    if (c.stage === 'build' && pos.bar >= c.bar + 2) {
+      c.stage = 'named';
+      contenderNamed(c);
+    }
+    if (c.stage !== 'ordered' && pos.bar >= c.drop) {
+      this.incoming = null;
+      this.enter(c.graph);
+      contenderLanded();
+    }
+  }
+
+  // The newcomer flies in huge from its own side of the stage and slams down into place.
+  enter(g) {
+    g.waiting = false;
+    this.graphs[1 - g.index].trim(BATTLE_NODES);  // the white flash hides the trim
+    g.measure();
+    const wide = view.w >= view.h;
+    const side = g.index ? 1 : -1;
+    Object.assign(g.v, {
+      ox: view.w / 2 + side * (wide ? view.w * 0.8 : 0),
+      oy: view.h / 2 + (wide ? 0 : side * view.h * 0.8),
+      x: g.fit.x,
+      y: g.fit.y,
+      push: 3.2,
+      alpha: 0,
+    });
+  }
+
+  // A knocked-out deck lights up one last time, then spins away.
+  knockOut(g, t) {
+    g.pulses = [];
+    g.labels = [];
+    g.env = { kick: 0, snare: 0, impact: 0 };
+    for (let k = 0; k < 24; k++) g.flash(g.randomNode(), t + k * 0.02, 1, 1.2);
+    this.waves.push({ kind: 'impact', at: t, v: 0.7, c: 0, from: g });
+    this.leaving.push(g);
+  }
+
+  drawLeaving(t, dt, pos) {
+    const wide = view.w >= view.h;
+    this.leaving = this.leaving.filter((g) => {
+      const v = g.v;
+      const side = g.index ? 1 : -1;
+      v.ox += side * (wide ? view.w * 0.7 : 0) * dt;
+      v.oy += (wide ? view.h * 0.12 : side * view.h * 0.7) * dt;
+      v.angle += side * 2.6 * dt;
+      v.zoom *= Math.exp(-dt * 0.9);
+      v.alpha *= Math.exp(-dt * 2.4);
+      g.project(this.sx, this.sy);
+      g.updateGlow(t);
+      g.draw(t, pos);
+      return v.alpha > 0.02;
+    });
   }
 
   later(t, fn) {
@@ -787,7 +909,7 @@ class Show {
 
   // A crackling line between the two corners, with VS on it. It fades as they sync.
   drawDivider(t, pos) {
-    if (!this.battle) return;
+    if (!this.battle || this.graphs.some((g) => g.waiting)) return;
     const apart = 1 - smooth(pos.sync);
     if (apart < 0.02) return;
     const [a, b] = this.graphs.map((g) => g.v);
@@ -1137,6 +1259,7 @@ function gaussian() {
 // The HUD: what section it is, the beat, the tempo, and in a battle who's winning
 
 function sectionLabel(pos) {
+  if (pos.stage === 'challenge') return 'Challenger';
   if (pos.stage === 'battle') return pos.section === 'intro' ? 'Intro' : `Round ${pos.round}`;
   if (pos.stage === 'sync') return pos.section === 'build' ? 'Build-up' : 'Syncing';
   return SECTIONS[pos.section].label;
@@ -1145,6 +1268,7 @@ function sectionLabel(pos) {
 function countdownText(pos) {
   const n = pos.barsLeft;
   const bars = `${n} bar${n === 1 ? '' : 's'}`;
+  if (pos.stage === 'challenge') return n <= 1 ? 'Here they come' : `Entering in ${bars}`;
   if (pos.section === 'build') return n <= 1 ? 'Drop incoming' : `Drop in ${bars}`;
   if (pos.stage === 'battle') return `${world.graphs[pos.nextDeck]?.short || 'Next'} in ${bars} · D to sync`;
   if (pos.stage === 'sync') return `Together in ${bars}`;
@@ -1185,6 +1309,9 @@ function updateHud(pos) {
     $('#meter-a').style.width = `${(50 + 50 * world.balance).toFixed(1)}%`;
     $('#vs').classList.toggle('synced', pos.stage === 'merged');
   }
+  // The cooking banner and the title card pulse with the music.
+  if (!cookingBox.hidden) cookingBox.style.setProperty('--kick', world.env.kick.toFixed(2));
+  if (!contenderBox.hidden) contenderBox.style.setProperty('--hit', Math.max(world.env.kick, world.env.snare).toFixed(2));
 }
 
 // ---------------------------------------------------------------------------
@@ -1193,7 +1320,7 @@ function updateHud(pos) {
 function loadSettings() {
   const fallback = {
     genre: 'repo', genreB: 'repo', lead: 'auto', mix: {}, mash: { drums: 0, bass: 1, chords: 1 },
-    intensity: 0.85, flashes: !REDUCED,
+    intensity: 0.85, flashes: !REDUCED, announcer: true,
   };
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
@@ -1207,6 +1334,7 @@ function loadSettings() {
       mash,
       intensity: Number.isFinite(saved.intensity) ? clamp(saved.intensity, 0, 1) : fallback.intensity,
       flashes: typeof saved.flashes === 'boolean' ? saved.flashes : fallback.flashes,
+      announcer: typeof saved.announcer === 'boolean' ? saved.announcer : fallback.announcer,
     };
   } catch {
     return fallback;
@@ -1300,25 +1428,44 @@ function buildMixer() {
 
   const intensity = $('#intensity');
   intensity.value = String(settings.intensity);
-  intensity.addEventListener('input', () => {
-    settings.intensity = Number(intensity.value);
-    saveSettings();
-  });
+  intensity.addEventListener('input', () => setIntensity(Number(intensity.value)));
   for (const box of [$('#flashes'), $('#flashes-start')]) {
     box.checked = settings.flashes;
-    box.addEventListener('change', () => {
-      settings.flashes = box.checked;
-      $('#flashes').checked = $('#flashes-start').checked = settings.flashes;
-      saveSettings();
-    });
+    box.addEventListener('change', () => setFlashes(box.checked));
   }
+  const voice = $('#announcer');
+  voice.checked = settings.announcer;
+  voice.addEventListener('change', () => setAnnouncer(voice.checked));
+  $('#reset-mix').addEventListener('click', resetMix);
+}
 
-  $('#reset-mix').addEventListener('click', () => {
-    settings.mix = {};
-    saveSettings();
-    if (world) music.setMix(mixFor(world.graphs.map((g) => g.set)));
-    syncMixer();
-  });
+function setIntensity(v) {
+  settings.intensity = clamp(Number(v) || 0, 0, 1);
+  $('#intensity').value = String(settings.intensity);
+  saveSettings();
+  publish();
+}
+
+function setFlashes(on) {
+  settings.flashes = Boolean(on);
+  $('#flashes').checked = $('#flashes-start').checked = settings.flashes;
+  saveSettings();
+  publish();
+}
+
+function setAnnouncer(on) {
+  settings.announcer = Boolean(on);
+  $('#announcer').checked = settings.announcer;
+  saveSettings();
+  if (!on) announcer.hush();
+  publish();
+}
+
+function resetMix() {
+  settings.mix = {};
+  saveSettings();
+  if (world) music.setMix(mixFor(world.graphs.map((g) => g.set)));
+  syncMixer();
 }
 
 function changeChannel(id, patch) {
@@ -1336,7 +1483,7 @@ function applyGenre(id, deck = 0) {
   if (g) {
     const set = deriveSet(g.scene, id, settings.lead);
     g.setSet(set);
-    if (world.battle) music.setDeck(deck, set);  // heard from the next bar
+    if (music.battle) music.setDeck(deck, set);  // heard from the next bar (also while a newcomer is on its way)
     else music.configure([set], mixFor([set]), 'drop');  // bring the new genre in with a drop
     showSets();
   }
@@ -1417,10 +1564,16 @@ function syncMixer() {
     row.querySelector('.switch').checked = state.on;
     const level = row.querySelector('input[type=range]');
     if (document.activeElement !== level) level.value = String(state.level);
-    const words = world ? [...new Set(world.graphs.map((g) => describeChannel(channel.id, g.set)))] : [];
-    row.querySelector('.inst-sub').textContent = words.length > 1 ? `A: ${words[0]} · B: ${words[1]}` : words[0] || '';
+    row.querySelector('.inst-sub').textContent = channelNote(channel.id);
   }
   renderAbout();
+  publish();
+}
+
+// What a channel plays, for each deck.
+function channelNote(id) {
+  const words = world ? [...new Set(world.graphs.map((g) => describeChannel(id, g.set)))] : [];
+  return words.length > 1 ? `A: ${words[0]} · B: ${words[1]}` : words[0] || '';
 }
 
 function renderAbout() {
@@ -1481,6 +1634,7 @@ function showCommitCaption(graph, commit, number, section) {
 function showScreen(name) {
   $('#intro').hidden = name !== 'intro';
   $('#progress').hidden = name !== 'progress';
+  $('#gigs').hidden = name !== 'gigs';
   $('#hud').hidden = name !== 'hud';
   document.body.classList.remove('idle');
 }
@@ -1498,11 +1652,13 @@ async function postJSON(url, body) {
   return data;
 }
 
-// Wait for every repository's job, showing each one's progress.
-async function waitForJobs(ids, names) {
+// Wait for every repository's job, reporting each one's progress. Gives up quietly (null) as soon
+// as `alive` says the result is no longer wanted.
+async function waitForJobs(ids, names, report = showProgress, alive = () => true) {
   const results = new Array(ids.length).fill(null);
   for (;;) {
     await sleep(700);
+    if (!alive()) return null;
     const steps = [];
     const logs = [];
     for (let k = 0; k < ids.length; k++) {
@@ -1518,10 +1674,14 @@ async function waitForJobs(ids, names) {
       steps.push(ids.length > 1 ? `${names[k]}: ${job.step}` : job.step);
       logs.push(...job.log.slice(-(ids.length > 1 ? 6 : 12)));
     }
-    $('#step').textContent = steps.join('\n');
-    $('#log').textContent = logs.join('\n');
+    report(steps, logs);
     if (results.every(Boolean)) return results;
   }
+}
+
+function showProgress(steps, logs) {
+  $('#step').textContent = steps.join('\n');
+  $('#log').textContent = logs.join('\n');
 }
 
 async function begin(scenes) {
@@ -1536,14 +1696,27 @@ async function begin(scenes) {
   music.configure(sets, mixFor(sets));
   world = new Show(scenes, sets);
   music.onBar = (bar, t, info) => world && world.onBar(bar, t, info);
+  setupDecks();
+  $('#caption').classList.add('fading');
+  showScreen('hud');
+  wake();
+}
 
+// The deck names, the VS meter and the drop button, for one deck or a battle. `incoming` is a
+// deck about to land, kept a mystery until it does.
+function setupDecks(incoming = -1) {
   const battle = world.battle;
   document.body.classList.toggle('battle', battle);
   for (const [k, sel] of [[0, '#repo-name'], [1, '#repo-name-b']]) {
     const g = world.graphs[k];
     if (!g) continue;
-    $(sel).replaceChildren(`${g.scene.repo.owner}/`, document.createElement('wbr'), g.scene.repo.name);  // wrap after the slash
-    $(sel).href = g.scene.repo.url;
+    if (k === incoming) {
+      $(sel).replaceChildren('???');
+      $(sel).removeAttribute('href');
+    } else {
+      $(sel).replaceChildren(`${g.scene.repo.owner}/`, document.createElement('wbr'), g.scene.repo.name);  // wrap after the slash
+      $(sel).href = g.scene.repo.url;
+    }
   }
   $('.deck-b').hidden = !battle;
   $('#vs').hidden = !battle;
@@ -1551,9 +1724,7 @@ async function begin(scenes) {
   $('#drop').title = battle ? 'Sync the decks into one drop (D)' : 'Skip to the next drop (D)';
   hud = {};
   showSets();
-  $('#caption').classList.add('fading');
-  showScreen('hud');
-  wake();
+  if (incoming >= 0) $(incoming ? '#mood-b' : '#mood').textContent = 'A new contender';
 }
 
 function showSets() {
@@ -1566,10 +1737,15 @@ function leave() {
   music.stop();
   music.onBar = null;
   world = null;
+  cooking = null;
+  hideCooking();
+  contenderBox.hidden = true;
+  announcer.hush();
   closePanels();
   document.body.classList.remove('battle');
   for (const key of ['section', 'stage', 'deck']) delete document.body.dataset[key];
   showScreen('intro');
+  publish();
 }
 
 function dropNow() {
@@ -1577,10 +1753,10 @@ function dropNow() {
   const button = $('#drop');
   const result = music.requestDrop();
   button.classList.toggle('armed', Boolean(result));
-  $('#countdown').textContent = result === 'sync' ? 'Syncing up from the next bar'
+  notify(result === 'sync' ? 'Syncing up from the next bar'
     : result ? 'Build-up from the next bar'
-      : world.battle ? 'Already coming together' : 'A drop is already on its way';
-  hud.soon = null;
+      : world.incoming ? 'A new contender is on the way'
+        : world.battle ? 'Already coming together' : 'A drop is already on its way');
   setTimeout(() => button.classList.remove('armed'), 1600);
 }
 
@@ -1671,9 +1847,293 @@ function fail(err) {
 }
 
 // ---------------------------------------------------------------------------
+// The announcer: the browser's own voice, pitched down, with the music dipping under it
+
+const speech = window.speechSynthesis || null;
+const announcer = {
+  voice: null,
+  timer: null,
+
+  // The best English voice on this system: a natural-sounding one if there is one, deep if possible.
+  pickVoice() {
+    const voices = speech ? speech.getVoices() : [];
+    const score = (v) => (/^en/i.test(v.lang) ? 4 : 0) + (/natural|neural|online/i.test(v.name) ? 2 : 0)
+      + (/guy|davis|christopher|eric|roger|steffan|ryan|brian|david|mark|daniel|alex|fred|\bmale\b/i.test(v.name) ? 1 : 0);
+    this.voice = voices.reduce((best, v) => (!best || score(v) > score(best) ? v : best), null);
+  },
+
+  say(text) {
+    if (!speech || !settings.announcer || music.muted) return;
+    if (!this.voice) this.pickVoice();
+    const line = new SpeechSynthesisUtterance(text);
+    if (this.voice) line.voice = this.voice;
+    line.lang = this.voice ? this.voice.lang : 'en-US';
+    line.pitch = 0.55;
+    line.rate = 0.9;
+    line.volume = clamp(music.volume * 1.25, 0, 1);
+    line.onstart = () => this.duck(true);
+    line.onend = line.onerror = () => {
+      if (!speech.pending) this.duck(false);
+    };
+    speech.speak(line);
+  },
+
+  duck(on) {
+    music.duck(on);
+    clearTimeout(this.timer);
+    if (on) this.timer = setTimeout(() => music.duck(false), 8000);  // in case the browser never says it's done
+  },
+
+  hush() {
+    if (speech) speech.cancel();
+    this.duck(false);
+  },
+};
+if (speech) speech.addEventListener('voiceschanged', () => announcer.pickVoice());
+
+// ---------------------------------------------------------------------------
+// A new contender: a repo added while the set plays. Claude cooks it (the server builds its
+// scene while the music carries on), then it's announced and slams in as a deck of its own:
+// beside a solo deck, or in place of whichever deck is behind in a battle (winner stays on).
+
+let cooking = null;  // the repo on its way in, from when it's asked for until it lands
+let cookingTimer = null;
+
+async function addContender(url) {
+  url = String(url || '').trim();
+  if (!world || cooking || !url) return;
+  const show = world;
+  const order = { name: shortUrl(url) };
+  cooking = order;
+  const alive = () => cooking === order && world === show;
+  const started = performance.now();
+  showCooking(order.name, 'Getting ready');
+  announcer.say('Claude is cooking!');
+  try {
+    const { job } = await postJSON('/api/build', { url });
+    const scenes = await waitForJobs([job], [order.name], (steps) => alive() && showCooking(order.name, steps[0]), alive);
+    if (!scenes || !alive()) return;
+    const scene = trimScene(scenes[0], BATTLE_NODES);
+    const slot = show.battle ? (show.balance >= 0 ? 1 : 0) : 1;
+    const graph = new Graph(show, scene, deriveSet(scene, genreChoice(slot), settings.lead), slot, false);
+    showCooking(graph.name, 'Plating up');
+    while (!graph.settle(5)) {  // a few milliseconds at a time, so the music never stutters
+      await sleep(10);
+      if (!alive()) return;
+    }
+    await sleep(Math.max(0, COOK_AT_LEAST - (performance.now() - started)));
+    if (!alive()) return;
+    hideCooking();
+    show.challenge(graph);
+    publish();
+  } catch (err) {
+    if (!alive()) return;
+    cooking = null;
+    showCooking(order.name, err.message || String(err), true);
+  }
+}
+
+function showCooking(name, step, failed = false) {
+  clearTimeout(cookingTimer);
+  cookingBox.classList.toggle('burnt', failed);
+  $('#cooking-title').textContent = failed ? `Couldn't cook ${name}` : 'Claude is cooking';
+  $('#cooking-step').textContent = failed ? step : `${name} · ${step}`;
+  cookingBox.hidden = false;
+  if (failed) cookingTimer = setTimeout(hideCooking, 10000);
+  wake();
+  publish();
+}
+
+function hideCooking() {
+  clearTimeout(cookingTimer);
+  cookingBox.hidden = true;
+  wake();
+  publish();
+}
+
+// Stop waiting for the repo being cooked. The server finishes it anyway, so it's quick next time.
+function stopCooking() {
+  if (cooking && !(world && world.incoming)) cooking = null;
+  hideCooking();
+}
+
+// What adding a repo will do right now.
+function addNote() {
+  if (!world) return '';
+  if (cooking) return `Claude is already cooking ${cooking.name}. One at a time.`;
+  if (!world.battle) return `It battles ${world.graphs[0].short}.`;
+  const loser = world.graphs[world.balance >= 0 ? 1 : 0];
+  return `Winner stays on: when it lands, whoever is behind on the meter makes way. Right now that's ${loser.short}.`;
+}
+
+// The build-up before a newcomer lands: the HUD makes room, and the title card and the
+// announcer call it in.
+function contenderArrives(c) {
+  setupDecks(c.slot);
+  const g = c.graph;
+  $('#contender-name').textContent = g.name;
+  $('#contender-meta').textContent = [`${GENRES[g.set.genre].name} · ${g.set.bpm} BPM`, `vs ${c.champion.short}`,
+    c.loser ? `${c.loser.short} is out` : ''].filter(Boolean).join('  ·  ');
+  contenderBox.className = 'contender';
+  contenderBox.hidden = false;
+  void contenderBox.offsetWidth;  // restart the animations
+  contenderBox.classList.add('show');
+  announcer.say('A new contender has arrived!');
+  publish();
+}
+
+function contenderNamed(c) {
+  contenderBox.classList.add('reveal');
+  announcer.say(`${c.graph.short.replace(/[-_.]+/g, ' ')}!`);
+}
+
+// It's in: both decks on the HUD, and the pair remembered for the start screen.
+function contenderLanded() {
+  cooking = null;
+  setupDecks();
+  remember({ a: world.graphs[0].scene.repo.url, b: world.graphs[1].scene.repo.url });
+  contenderBox.classList.add('blast');
+  setTimeout(() => {
+    if (contenderBox.classList.contains('blast')) contenderBox.hidden = true;
+  }, 700);
+  wake();
+  publish();
+}
+
+// ---------------------------------------------------------------------------
+// The control deck: the controls in a window of their own (deck.html), so the show can stay full
+// screen and clean on one display while you DJ from another. The two talk over a BroadcastChannel.
+
+const deckLink = 'BroadcastChannel' in window ? new BroadcastChannel('djrepo-deck') : null;
+let deckSeen = 0;  // when the control deck last checked in
+
+const deckConnected = () => deckSeen > 0 && performance.now() - deckSeen < 6000;
+
+function openDeck() {
+  const popup = window.open('deck.html', 'djrepo-deck', 'popup,width=480,height=860');
+  if (!popup) notify('Your browser blocked the window. Allow pop-ups for this page and try again.');
+}
+
+function deckGone() {
+  deckSeen = 0;
+  document.body.classList.remove('remote');
+}
+
+// The whole state the deck shows. It's small, so it's simply sent again on every change.
+function publish() {
+  if (!deckLink || !deckSeen) return;
+  deckLink.postMessage({
+    type: 'state',
+    state: {
+      playing: Boolean(world),
+      battle: Boolean(world && world.battle),
+      incoming: Boolean(world && world.incoming),
+      decks: world ? world.graphs.map((g) => ({
+        name: g.name, short: g.short, label: g.set.label, genre: g.set.genre, lead: g.set.lead,
+        codeLead: g.set.codeLead, repoGenre: g.repoGenre, waiting: Boolean(g.waiting),
+      })) : [],
+      settings: {
+        genre: settings.genre, genreB: settings.genreB, lead: settings.lead, mash: settings.mash,
+        intensity: settings.intensity, flashes: settings.flashes, announcer: settings.announcer,
+      },
+      mix: music.mix,
+      notes: Object.fromEntries(CHANNELS.map((c) => [c.id, channelNote(c.id)])),
+      volume: music.volume,
+      muted: music.muted,
+      cooking: cookingBox.hidden ? null : {
+        title: $('#cooking-title').textContent,
+        step: $('#cooking-step').textContent,
+        failed: cookingBox.classList.contains('burnt'),
+      },
+      busy: Boolean(cooking),
+      addNote: addNote(),
+    },
+  });
+}
+
+// Where the set is.
+function publishPosition(pos) {
+  if (!deckLink || !deckSeen) return;
+  deckLink.postMessage({
+    type: 'pos',
+    pos: {
+      label: sectionLabel(pos), soon: countdownText(pos), bpm: `${Math.round(pos.bpm)} BPM`,
+      beat: Math.max(0, Math.floor(pos.beatInBar)) % 4, progress: pos.progress, section: pos.section,
+      stage: pos.stage, deck: pos.deck, balance: world.balance,
+    },
+  });
+}
+
+// A heartbeat that doesn't wait for the page to be drawn. Browsers stop drawing a window that's
+// hidden (say, behind the control deck), but the music plays on, so a newcomer still has to land
+// on its drop and the deck still needs the beat.
+setInterval(() => {
+  if (!world) return;
+  const t = music.now();
+  const pos = music.position(t);
+  if (!pos) return;
+  world.admit(t, pos);
+  publishPosition(pos);
+}, 100);
+
+// A short message for whoever is DJing, wherever they are.
+function notify(text) {
+  if (world) {
+    $('#countdown').textContent = text;
+    hud.soon = null;
+  } else {
+    showError(text);
+  }
+  if (deckLink && deckSeen) deckLink.postMessage({ type: 'notice', text });
+}
+
+// What the deck can ask for. Its messages come from this site's own page, but are checked anyway.
+const DECK_COMMANDS = {
+  drop: () => dropNow(),
+  sound: () => toggleSound(),
+  volume: (v) => setVolume(v),
+  genre: (id, deck) => GENRES[id] && [0, 1].includes(deck) && applyGenre(id, deck),
+  lead: (id) => (id === 'auto' || LEADS[id]) && applyLead(id),
+  mash: (part, from) => MASH_PARTS.some(([p]) => p === part) && [0, 1].includes(from) && applyMash(part, from),
+  channel: (id, patch) => CHANNEL[id] && patch && changeChannel(id, { on: Boolean(patch.on), level: Number(patch.level) }),
+  reset: () => resetMix(),
+  intensity: (v) => setIntensity(v),
+  flashes: (on) => setFlashes(on),
+  announcer: (on) => setAnnouncer(on),
+  add: (url) => typeof url === 'string' && addContender(url),
+  stopCooking: () => stopCooking(),
+};
+const NEEDS_A_SET = new Set(['drop', 'genre', 'lead', 'mash', 'channel', 'reset', 'add', 'stopCooking']);
+
+if (deckLink) {
+  deckLink.addEventListener('message', ({ data }) => {
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'hello' || data.type === 'ping') {
+      const fresh = !deckConnected();
+      deckSeen = performance.now();
+      if (fresh || data.type === 'hello') {
+        document.body.classList.add('remote');  // the controls live over there now
+        closePanels();
+        publish();
+      } else {
+        deckLink.postMessage({ type: 'pong' });
+      }
+    } else if (data.type === 'bye') {
+      deckGone();
+    } else if (data.type === 'cmd') {
+      const run = DECK_COMMANDS[data.name];
+      if (run && (world || !NEEDS_A_SET.has(data.name))) run(...(Array.isArray(data.args) ? data.args : []));
+    }
+  });
+  setInterval(() => {
+    if (deckSeen && !deckConnected()) deckGone();  // closed without saying goodbye
+  }, 2000);
+}
+
+// ---------------------------------------------------------------------------
 // Panels, idling and keys
 
-const PANELS = { about: ['#about-panel', '#about'], mixer: ['#mixer', '#mixer-toggle'] };
+const PANELS = { about: ['#about-panel', '#about'], mixer: ['#mixer', '#mixer-toggle'], add: ['#add-panel', '#add'] };
 
 function togglePanel(which) {
   const [panel, button] = PANELS[which];
@@ -1683,6 +2143,11 @@ function togglePanel(which) {
     $(panel).hidden = false;
     $(button).setAttribute('aria-expanded', 'true');
     syncMixer();
+    if (which === 'add') {
+      $('#add-note').textContent = addNote();
+      $('#add-go').disabled = Boolean(cooking);
+      $('#add-url').focus();
+    }
   }
   wake();
 }
@@ -1699,7 +2164,7 @@ function wake() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
     const open = Object.values(PANELS).some(([panel]) => !$(panel).hidden);
-    if (world && !open) document.body.classList.add('idle');
+    if (world && !open && cookingBox.hidden) document.body.classList.add('idle');
   }, 3500);
 }
 
@@ -1710,9 +2175,17 @@ function toggleFullscreen() {
 
 function toggleSound() {
   music.setMuted(!music.muted);
+  if (music.muted) announcer.hush();
   const button = $('#sound');
   button.setAttribute('aria-pressed', String(!music.muted));
   button.classList.toggle('muted', music.muted);
+  publish();
+}
+
+function setVolume(v) {
+  music.setVolume(clamp(Number(v) || 0, 0, 1));
+  $('#volume').value = String(music.volume);
+  publish();
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1742,12 +2215,23 @@ $('#repo-form').addEventListener('submit', async (event) => {
 $('#repo-url-b').addEventListener('input', updateGoButton);
 
 $('#sound').addEventListener('click', toggleSound);
-$('#volume').addEventListener('input', (e) => music.setVolume(Number(e.target.value)));
+$('#volume').addEventListener('input', (e) => setVolume(e.target.value));
 $('#fullscreen').addEventListener('click', toggleFullscreen);
 $('#drop').addEventListener('click', dropNow);
 $('#again').addEventListener('click', leave);
 $('#about').addEventListener('click', () => togglePanel('about'));
 $('#mixer-toggle').addEventListener('click', () => togglePanel('mixer'));
+$('#add').addEventListener('click', () => togglePanel('add'));
+$('#pop-out').addEventListener('click', openDeck);
+$('#cooking-close').addEventListener('click', stopCooking);
+$('#add-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const url = $('#add-url').value.trim();
+  if (!url || cooking) return;
+  $('#add-url').value = '';
+  closePanels();
+  addContender(url);
+});
 
 for (const type of ['pointermove', 'pointerdown', 'keydown', 'touchstart']) {
   window.addEventListener(type, wake, { passive: true });
@@ -1762,6 +2246,11 @@ window.addEventListener('keydown', (e) => {
   if (key === 'm') toggleSound();
   if (key === 'x') togglePanel('mixer');
   if (key === 'd') dropNow();
+  if (key === 'c') openDeck();
+  if (key === 'a') {
+    e.preventDefault();  // or the A lands in the box that's about to get focus
+    togglePanel('add');
+  }
 });
 window.addEventListener('resize', resize);
 

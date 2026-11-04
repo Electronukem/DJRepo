@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;700&family=Unbounded:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -27,7 +28,13 @@
         <label for="repo-url-b" class="sr-only">A second repository to battle (optional)</label>
         <input id="repo-url-b" name="url-b" type="text" inputmode="url" placeholder="a second repo to battle (optional)" spellcheck="false">
       </div>
-      <button id="go" type="submit">Drop it</button>
+      <div class="go-row">
+        <button id="go" type="submit">Drop it</button>
+        <button id="find-gig" class="ghost with-icon gig-button" type="button" title="Find real gigs near you and pitch them a clip of this set">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>
+          Find a gig
+        </button>
+      </div>
     </form>
     <div class="checks">
       <label class="check"><input type="checkbox" id="refresh"> Fetch it fresh instead of using the saved copy</label>
@@ -36,13 +43,103 @@
     <div id="recent" class="recent" hidden></div>
     <p id="error" class="error" role="alert" hidden></p>
     <div id="notice" class="notice" hidden></div>
-    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), X opens the mixer, F is full screen and M is mute.</p>
+    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo, X opens the mixer,
+      C puts the controls in their own window, F is full screen and M is mute.</p>
   </main>
 
   <section id="progress" class="screen" hidden aria-live="polite">
     <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <p id="step">Getting ready</p>
     <pre id="log"></pre>
+  </section>
+
+  <section id="gigs" class="gigs" hidden aria-label="Find a gig">
+    <div class="gig-panel">
+      <header class="gig-head">
+        <button id="gig-back" class="ghost" type="button">Back</button>
+        <h2>Find a gig</h2>
+        <button id="gig-play" class="ghost" type="button">Play the set</button>
+      </header>
+      <p class="gig-lede">Real upcoming dance and electronic nights. Pick one and Muse Spark looks into the room,
+        the night and who books it, then drafts an email from you with a clip of <b id="gig-repo"></b> in the genre that suits it.
+        It opens in your own mail app for you to read and send.</p>
+      <div id="gig-keys" class="notice" hidden></div>
+
+      <form id="gig-search" class="gig-search" autocomplete="off">
+        <label for="gig-city" class="sr-only">City</label>
+        <input id="gig-city" type="text" placeholder="City, like Boston or London" spellcheck="false">
+        <label for="gig-radius" class="sr-only">How far</label>
+        <select id="gig-radius">
+          <option value="10">10 mi</option>
+          <option value="25">25 mi</option>
+          <option value="50" selected>50 mi</option>
+          <option value="100">100 mi</option>
+        </select>
+        <button class="drop-button" type="submit">Search</button>
+        <button id="gig-near" class="ghost" type="button">Near me</button>
+      </form>
+
+      <details id="me" class="gig-me">
+        <summary>You <span>signs the emails, stays in this browser</span></summary>
+        <label>Your name <input id="me-name" type="text" autocomplete="name" placeholder="Required"></label>
+        <label>DJ name <input id="me-djName" type="text" placeholder="If you play under one"></label>
+        <label>Based in <input id="me-city" type="text" placeholder="City"></label>
+        <label>Links <input id="me-links" type="text" placeholder="SoundCloud, Instagram, a mix"></label>
+        <label>About you <textarea id="me-about" rows="3" placeholder="Only true things: where you've played, what you play, how long you've been at it."></textarea></label>
+        <label class="check"><input id="me-mentionRepo" type="checkbox"> Say the clip was made from a GitHub repo with DJRepo</label>
+      </details>
+
+      <p id="gig-status" class="gig-status" aria-live="polite">Looking around Boston. Search another city, or use your location.</p>
+
+      <article id="gig-detail" class="gig-detail" hidden>
+        <img id="gig-image" alt="" hidden>
+        <h3 id="gig-title"></h3>
+        <p id="gig-facts" class="gig-facts"></p>
+        <p id="gig-more" class="gig-more"></p>
+        <a id="gig-tickets" class="gig-link" target="_blank" rel="noopener">The event page</a>
+
+        <div id="draft-working" class="cooking draft-working" role="status" hidden>
+          <span class="flames" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="cooking-text">
+            <span class="cooking-title">Muse Spark is digging</span>
+            <span id="draft-step" class="cooking-step"></span>
+          </span>
+        </div>
+        <div id="draft-error" class="draft-error" hidden>
+          <p id="draft-error-text"></p>
+          <button id="draft-retry" class="ghost" type="button">Try again</button>
+        </div>
+
+        <div id="draft" class="draft" hidden>
+          <p id="draft-who" class="draft-who"></p>
+          <p id="draft-how" class="draft-who draft-how"></p>
+          <div id="draft-maybe" class="draft-maybe" hidden></div>
+          <label>To <input id="draft-to" type="email" placeholder="Add their booking address"></label>
+          <label>Subject <input id="draft-subject" type="text"></label>
+          <label>Email <textarea id="draft-body" rows="12"></textarea></label>
+          <div class="clip">
+            <p id="draft-genre" class="clip-genre"></p>
+            <audio id="clip-player" controls preload="none"></audio>
+            <p id="clip-note" class="clip-note"></p>
+          </div>
+          <div class="send-row">
+            <a id="send-mail" class="drop-button send" href="#">Email them</a>
+            <a id="send-gmail" class="ghost" href="#" target="_blank" rel="noopener">Gmail</a>
+            <button id="copy-draft" class="ghost" type="button">Copy</button>
+            <button id="save-clip" class="ghost" type="button">Save clip</button>
+            <button id="draft-redo" class="ghost" type="button">Rewrite</button>
+          </div>
+          <p class="send-note">The clip saves as your mail app opens. Attach it, read it over, and send.</p>
+          <details class="draft-sources">
+            <summary>What it's based on</summary>
+            <ul id="draft-sources"></ul>
+          </details>
+        </div>
+      </article>
+
+      <div id="gig-list" class="gig-list"></div>
+    </div>
+    <div id="gig-map" class="gig-map"></div>
   </section>
 
   <div id="hud" hidden>
@@ -65,10 +162,41 @@
         <p id="countdown"></p>
         <p id="bpm"></p>
       </div>
+      <div id="cooking" class="cooking" role="status" hidden>
+        <span class="flames" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="cooking-text">
+          <span id="cooking-title" class="cooking-title">Claude is cooking</span>
+          <span id="cooking-step" class="cooking-step"></span>
+        </span>
+        <button id="cooking-close" class="icon cooking-close" type="button" aria-label="Stop waiting for this repo" title="Stop">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
+        </button>
+      </div>
     </header>
+
+    <div id="contender" class="contender" aria-live="polite" hidden>
+      <div class="contender-inner">
+        <p class="contender-one">A new contender</p>
+        <p class="contender-two">has arrived</p>
+        <p id="contender-name" class="contender-name"></p>
+        <p id="contender-meta" class="contender-meta"></p>
+      </div>
+    </div>
 
     <aside id="about-panel" class="panel" hidden>
       <ul id="reasons"></ul>
+    </aside>
+
+    <aside id="add-panel" class="panel add-panel" hidden aria-label="Add a repo">
+      <form id="add-form" autocomplete="off">
+        <h2>Bring in a challenger</h2>
+        <p id="add-note" class="add-note"></p>
+        <div class="add-row">
+          <label for="add-url" class="sr-only">GitHub repository</label>
+          <input id="add-url" type="text" inputmode="url" placeholder="github.com/owner/repository" spellcheck="false" required>
+          <button id="add-go" class="drop-button" type="submit">Bring it</button>
+        </div>
+      </form>
     </aside>
 
     <aside id="mixer" class="panel mixer" hidden aria-label="Mixer">
@@ -106,6 +234,10 @@
         </label>
         <label class="visual-row"><span>Flashing lights</span><input id="flashes" class="switch" type="checkbox"></label>
       </section>
+      <section>
+        <h2>Announcer <span>calls in new contenders</span></h2>
+        <label class="visual-row"><span>Voice</span><input id="announcer" class="switch" type="checkbox"></label>
+      </section>
       <button id="reset-mix" class="ghost" type="button">Back to the suggested mix</button>
     </aside>
 
@@ -128,6 +260,13 @@
       <button id="fullscreen" class="icon" type="button" aria-label="Full screen" title="Full screen (F)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
+      <button id="pop-out" class="icon" type="button" aria-label="Controls in a new window" title="Controls in a new window (C)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-8 8"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+      </button>
+      <button id="add" class="ghost with-icon" type="button" aria-expanded="false" aria-controls="add-panel" title="Bring in another repo (A)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="wide">Add repo</span>
+      </button>
       <button id="mixer-toggle" class="ghost with-icon" type="button" aria-expanded="false" aria-controls="mixer" title="Mixer (X)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M12 4v16M18 4v16"/><path d="M4 14h4M10 8h4M16 16h4"/></svg>
         Mixer
@@ -138,8 +277,11 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="genres.js"></script>
   <script src="dj.js"></script>
   <script src="app.js"></script>
+  <script src="sample.js"></script>
+  <script src="gigs.js"></script>
 </body>
 </html>

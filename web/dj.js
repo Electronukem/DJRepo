@@ -3,7 +3,8 @@
 // they take eight-bar rounds, each in its own genre and tempo. Asked to drop, they sync up, trading
 // bars, then half bars, beats and eighths while their tempos and keys meet in the middle, and come
 // together in one mashup drop (drums from one deck, bass and chords from the other) before
-// splitting up to battle again.
+// splitting up to battle again. A new deck can join mid-set (challenge): the deck that stays
+// builds up, and the newcomer drops in and takes the next round.
 //
 // The timeline is built a bar at a time, and every bar carries its own tempo and whose groove it
 // is. The lead line comes from the light show: app.js asks for a note whenever light lands on a
@@ -238,6 +239,8 @@ class DJ {
     this.phrases = [];
     this.queue = [];        // phrases asked for (a drop, a sync), played before the set carries on
     this.bars = [];         // the timeline, a bar at a time
+    this.round = 0;
+    this.roundOffset = 0;   // which deck a battle's odd rounds belong to
     this.onBar = null;      // (bar, time, info) => void, called a little ahead of each bar
   }
 
@@ -270,6 +273,7 @@ class DJ {
     this.queue = [];
     this.cycle = 0;
     this.round = 0;
+    this.roundOffset = 0;
     const stage = this.battle ? 'battle' : 'solo';
     if (opening === 'drop' && !this.battle) {
       this.phrases = [{ section: 'build', stage, deck: 0, start: 0, bars: 4 }, { section: 'drop', stage, deck: 0, start: 4, bars: 16 }];
@@ -310,6 +314,23 @@ class DJ {
 
   setLead(i, lead) {
     if (this.decks[i]) this.decks[i].lead = lead;
+  }
+
+  // A new contender takes deck `slot`: beside a solo deck (1), or in place of the deck it knocks
+  // out. From the next bar the deck that stays builds up for four bars, then the newcomer drops
+  // in at full strength and takes round one. Returns the bars where the build-up and the drop start.
+  challenge(set, slot) {
+    this.decks[slot] = deckSound(set, slot);
+    this.battle = true;
+    this.remix();
+    this.round = 1;
+    this.roundOffset = slot;  // round one is the newcomer's, round two the champion's, and so on
+    const bar = Math.ceil(this.nextStep / 16);  // the first bar not scheduled yet
+    this.cut(bar, [
+      { section: 'build', stage: 'challenge', deck: 1 - slot, bars: 4 },
+      { section: 'drop', stage: 'battle', deck: slot, bars: ROUND_BARS, round: 1, entrance: true },
+    ]);
+    return { bar, drop: bar + 4 };
   }
 
   // Which deck the mashup takes its drums, bass and chords from.
@@ -362,6 +383,16 @@ class DJ {
     this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, t, 0.05);
   }
 
+  // Dip the whole mix under the announcer's voice, or bring it back up.
+  duck(on) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const g = this.voiceDuck.gain;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.setTargetAtTime(on ? 0.35 : 1, t, on ? 0.06 : 0.4);
+  }
+
   // ---- the arrangement ----
 
   phraseAt(bar) {
@@ -385,7 +416,7 @@ class DJ {
       return { section, stage: 'solo', deck: 0, bars: SECTIONS[section].bars };
     }
     this.round++;
-    return { section: 'drop', stage: 'battle', deck: (this.round - 1) % 2, bars: ROUND_BARS, round: this.round };
+    return { section: 'drop', stage: 'battle', deck: (this.round - 1 + this.roundOffset) % 2, bars: ROUND_BARS, round: this.round };
   }
 
   // Solo: a short build-up and a drop. Battle: sync the decks and merge them into one drop.
@@ -394,6 +425,7 @@ class DJ {
     if (!this.decks.length) return false;
     const bar = Math.ceil(this.nextStep / 16);  // the first bar not scheduled yet
     const p = this.phraseAt(bar);
+    if (p.stage === 'challenge' || (p.entrance && p.start === bar)) return false;  // a newcomer is on its way in
     if (!this.battle) {
       if (p.section === 'drop' || p.section === 'build') return false;
       this.cut(bar, [{ section: 'build', stage: 'solo', deck: 0, bars: 4 }, { section: 'drop', stage: 'solo', deck: 0, bars: 16 }]);
@@ -445,7 +477,7 @@ class DJ {
     let turns = null;
     let split = 0;
     let bpm = a.bpm;
-    if (p.stage === 'battle') {
+    if (p.stage === 'battle' || p.stage === 'challenge') {
       harmony = this.decks[p.deck] || a;
       bpm = harmony.bpm;
     } else if (p.stage === 'sync' && p.section === 'drop') {
@@ -688,8 +720,8 @@ class DJ {
     const pb = bar.pb;
     const chord = this.chord(bar);
     if (pb === 0) {
-      // A battle round's impact is lighter than the drop the decks make together.
-      if (sec === 'drop') this.hit('impact', t, p.stage === 'battle' ? 0.5 : 1, bar.deck);
+      // A battle round's impact is lighter than the drop the decks make together, or a newcomer's entrance.
+      if (sec === 'drop') this.hit('impact', t, p.stage === 'battle' && !p.entrance ? 0.5 : 1, bar.deck);
       else if (sec === 'groove') this.hit('crash', t, 0.6, bar.deck);
     } else if (sec === 'drop' && pb === 8) {
       this.hit('crash', t, 0.7, bar.deck);
@@ -734,7 +766,7 @@ class DJ {
         break;
       }
       case 'drop':
-        this.impact(t, p.stage === 'battle' ? 0.6 : 1);
+        this.impact(t, p.stage === 'battle' && !p.entrance ? 0.6 : 1);
         break;
       case 'break':
         this.downlifter(t, bar.len * 2);
@@ -785,7 +817,9 @@ class DJ {
     this.spectrumData = new Uint8Array(this.analyser.frequencyBinCount);
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : this.volume;
-    this.bus.connect(glue).connect(limiter).connect(this.analyser).connect(this.master).connect(ctx.destination);
+    this.voiceDuck = ctx.createGain();
+    this.bus.connect(glue).connect(limiter).connect(this.voiceDuck).connect(this.analyser).connect(this.master)
+      .connect(ctx.destination);
 
     this.reverb = ctx.createConvolver();
     this.reverb.buffer = this.impulse(2.4);

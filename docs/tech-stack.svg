@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+  <title>How DJRepo works: the browser, the DJRepo server, and the services it calls, including Meta's Muse Spark</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12081f"/>
+      <stop offset="1" stop-color="#06040d"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff3fa4"/>
+      <stop offset="0.5" stop-color="#ffd23f"/>
+      <stop offset="1" stop-color="#3fd2ff"/>
+    </linearGradient>
+    <linearGradient id="meta" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b2a66"/>
+      <stop offset="1" stop-color="#101032"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#a49cc4"/>
+    </marker>
+    <marker id="arrow-meta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#4d94ff"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="800" rx="24" fill="url(#bg)"/>
+
+  <text x="48" y="68" font-size="32" font-weight="800" fill="url(#brand)">How DJRepo works</text>
+  <text x="48" y="100" font-size="16" fill="#a49cc4">Every beat and pixel is made in your browser. Meta's Muse Spark does the research and the writing.</text>
+
+  <!-- column headings -->
+  <g font-size="13" font-weight="700" letter-spacing="2" fill="#a49cc4">
+    <text x="48" y="152">YOUR BROWSER</text>
+    <text x="470" y="152">DJREPO SERVER · PYTHON · DOCKER</text>
+    <text x="862" y="152">OUTSIDE SERVICES</text>
+  </g>
+
+  <!-- the browser -->
+  <g>
+    <g transform="translate(48 168)">
+      <rect width="340" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/><rect width="5" height="62" rx="2" fill="#ff3fa4"/>
+      <text x="20" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Light show</text>
+      <text x="20" y="48" font-size="13.5" fill="#a49cc4">Canvas 2D + d3-force · beat-synced camera</text>
+    </g>
+    <g transform="translate(48 242)">
+      <rect width="340" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/><rect width="5" height="62" rx="2" fill="#ff3fa4"/>
+      <text x="20" y="27" font-size="17" font-weight="700" fill="#f4f0ff">DJ engine</text>
+      <text x="20" y="48" font-size="13.5" fill="#a49cc4">Web Audio synths, no samples · sequencer</text>
+    </g>
+    <g transform="translate(48 316)">
+      <rect width="340" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/><rect width="5" height="62" rx="2" fill="#ffd23f"/>
+      <text x="20" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Control deck</text>
+      <text x="20" y="48" font-size="13.5" fill="#a49cc4">A second window, over BroadcastChannel</text>
+    </g>
+    <g transform="translate(48 390)">
+      <rect width="340" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/><rect width="5" height="62" rx="2" fill="#ffd23f"/>
+      <text x="20" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Announcer</text>
+      <text x="20" y="48" font-size="13.5" fill="#a49cc4">Web Speech · the mix ducks under it</text>
+    </g>
+    <g transform="translate(48 464)">
+      <rect width="340" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/><rect width="5" height="62" rx="2" fill="#3fd2ff"/>
+      <text x="20" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Gig finder</text>
+      <text x="20" y="48" font-size="13.5" fill="#a49cc4">Leaflet map · OpenStreetMap tiles</text>
+    </g>
+    <g transform="translate(48 538)">
+      <rect width="340" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/><rect width="5" height="62" rx="2" fill="#3fd2ff"/>
+      <text x="20" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Clip studio</text>
+      <text x="20" y="48" font-size="13.5" fill="#a49cc4">OfflineAudioContext → MP3 (lamejs)</text>
+    </g>
+  </g>
+
+  <!-- the server -->
+  <g>
+    <g transform="translate(470 168)">
+      <rect width="310" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Job runner</text>
+      <text x="18" y="48" font-size="13.5" fill="#a49cc4">stdlib http.server · background jobs</text>
+    </g>
+    <g transform="translate(470 242)">
+      <rect width="310" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="27" font-size="17" font-weight="700" fill="#f4f0ff">git clone</text>
+      <text x="18" y="48" font-size="13.5" fill="#a49cc4">the last 400 commits, history only</text>
+    </g>
+    <g transform="translate(470 316)">
+      <rect width="310" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="27" font-size="17" font-weight="700" fill="#f4f0ff">graphify</text>
+      <text x="18" y="48" font-size="13.5" fill="#a49cc4">code → knowledge graph + clusters</text>
+    </g>
+    <g transform="translate(470 390)">
+      <rect width="310" height="62" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="27" font-size="17" font-weight="700" fill="#f4f0ff">Scene</text>
+      <text x="18" y="48" font-size="13.5" fill="#a49cc4">trimmed graph · commit replay · stats</text>
+    </g>
+    <g transform="translate(470 464)">
+      <rect width="310" height="62" rx="12" fill="#150f2a" stroke="#4d94ff" stroke-width="1.5"/>
+      <text x="18" y="27" font-size="17" font-weight="700" fill="#f4f0ff">gigs.py</text>
+      <text x="18" y="48" font-size="13.5" fill="#a49cc4">events · research · contact check</text>
+    </g>
+    <g transform="translate(470 538)">
+      <rect width="310" height="62" rx="12" fill="none" stroke="#3a2f55" stroke-dasharray="5 5"/>
+      <text x="18" y="27" font-size="17" font-weight="700" fill="#f4f0ff">.env</text>
+      <text x="18" y="48" font-size="13.5" fill="#a49cc4">keys read at run time, never baked in</text>
+    </g>
+    <!-- the build pipeline, top to bottom -->
+    <g stroke="#a49cc4" stroke-width="1.5" marker-end="url(#arrow)">
+      <line x1="625" y1="230" x2="625" y2="240"/>
+      <line x1="625" y1="304" x2="625" y2="314"/>
+      <line x1="625" y1="378" x2="625" y2="388"/>
+    </g>
+  </g>
+
+  <!-- browser and server -->
+  <g fill="none" stroke="#a49cc4" stroke-width="1.6">
+    <line x1="392" y1="199" x2="466" y2="199" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <line x1="392" y1="495" x2="466" y2="495" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  </g>
+  <g font-size="12" fill="#a49cc4" text-anchor="middle">
+    <text x="429" y="190">repo</text>
+    <text x="429" y="216">scene</text>
+    <text x="429" y="486">gig</text>
+    <text x="429" y="512">draft</text>
+  </g>
+
+  <!-- Meta Model API -->
+  <g transform="translate(862 168)">
+    <rect width="290" height="214" rx="14" fill="url(#meta)" stroke="#4d94ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="18" y="32" font-size="18" font-weight="800" fill="#ffffff">Meta Model API</text>
+    <rect x="18" y="44" width="122" height="24" rx="12" fill="#0866ff"/>
+    <text x="79" y="61" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle">Muse Spark 1.3</text>
+    <text x="18" y="96" font-size="14" font-weight="700" fill="#cfe1ff">Responses + web_search</text>
+    <text x="18" y="115" font-size="13" fill="#9fb8e6">researches the venue, night, booker</text>
+    <text x="18" y="143" font-size="14" font-weight="700" fill="#cfe1ff">Chat + json_schema</text>
+    <text x="18" y="162" font-size="13" fill="#9fb8e6">pulls out facts, picks the genre</text>
+    <text x="18" y="190" font-size="14" font-weight="700" fill="#cfe1ff">reasoning_effort</text>
+    <text x="18" y="207" font-size="13" fill="#9fb8e6">quick research, careful writing</text>
+  </g>
+
+  <!-- other services -->
+  <g>
+    <g transform="translate(862 396)">
+      <rect width="290" height="50" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="22" font-size="16" font-weight="700" fill="#f4f0ff">GitHub</text>
+      <text x="18" y="41" font-size="13" fill="#a49cc4">public repositories</text>
+    </g>
+    <g transform="translate(862 456)">
+      <rect width="290" height="50" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="22" font-size="16" font-weight="700" fill="#f4f0ff">Ticketmaster</text>
+      <text x="18" y="41" font-size="13" fill="#a49cc4">Discovery API: real upcoming events</text>
+    </g>
+    <g transform="translate(862 516)">
+      <rect width="290" height="50" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="22" font-size="16" font-weight="700" fill="#f4f0ff">OpenStreetMap</text>
+      <text x="18" y="41" font-size="13" fill="#a49cc4">map tiles + Nominatim place search</text>
+    </g>
+    <g transform="translate(862 576)">
+      <rect width="290" height="50" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <text x="18" y="22" font-size="16" font-weight="700" fill="#f4f0ff">Venue websites</text>
+      <text x="18" y="41" font-size="13" fill="#a49cc4">read to confirm booking contacts</text>
+    </g>
+  </g>
+
+  <!-- server and services -->
+  <g fill="none" stroke-width="1.6">
+    <path d="M780 273 C 822 273 822 421 858 421" stroke="#a49cc4" marker-end="url(#arrow)"/>
+    <path d="M780 488 C 822 488 822 290 858 290" stroke="#4d94ff" stroke-width="2.2" marker-end="url(#arrow-meta)"/>
+    <path d="M780 495 C 822 495 822 481 858 481" stroke="#a49cc4" marker-end="url(#arrow)"/>
+    <path d="M780 502 C 822 502 822 541 858 541" stroke="#a49cc4" marker-end="url(#arrow)"/>
+    <path d="M780 509 C 822 509 822 601 858 601" stroke="#a49cc4" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- the pitch, step by step -->
+  <text x="48" y="672" font-size="13" font-weight="700" letter-spacing="2" fill="#a49cc4">PICK A GIG: THE PITCH IN FIVE STEPS</text>
+  <g>
+    <g transform="translate(48 686)">
+      <rect width="206" height="84" rx="12" fill="url(#meta)" stroke="#4d94ff"/>
+      <circle cx="26" cy="27" r="13" fill="#0866ff"/><text x="26" y="32" font-size="14" font-weight="800" fill="#fff" text-anchor="middle">1</text>
+      <text x="48" y="32" font-size="16" font-weight="700" fill="#fff">Research</text>
+      <text x="16" y="58" font-size="13" fill="#cfe1ff">Muse Spark searches</text>
+      <text x="16" y="75" font-size="13" fill="#cfe1ff">the web, with citations</text>
+    </g>
+    <g transform="translate(274 686)">
+      <rect width="206" height="84" rx="12" fill="url(#meta)" stroke="#4d94ff"/>
+      <circle cx="26" cy="27" r="13" fill="#0866ff"/><text x="26" y="32" font-size="14" font-weight="800" fill="#fff" text-anchor="middle">2</text>
+      <text x="48" y="32" font-size="16" font-weight="700" fill="#fff">Facts</text>
+      <text x="16" y="58" font-size="13" fill="#cfe1ff">structured output: the</text>
+      <text x="16" y="75" font-size="13" fill="#cfe1ff">room, night and genre</text>
+    </g>
+    <g transform="translate(500 686)">
+      <rect width="206" height="84" rx="12" fill="#150f2a" stroke="#3a2f55"/>
+      <circle cx="26" cy="27" r="13" fill="#ffd23f"/><text x="26" y="32" font-size="14" font-weight="800" fill="#1a0012" text-anchor="middle">3</text>
+      <text x="48" y="32" font-size="16" font-weight="700" fill="#fff">Check</text>
+      <text x="16" y="58" font-size="13" fill="#a49cc4">addresses only from</text>
+      <text x="16" y="75" font-size="13" fill="#a49cc4">pages it really read</text>
+    </g>
+    <g transform="translate(726 686)">
+      <rect width="206" height="84" rx="12" fill="url(#meta)" stroke="#4d94ff"/>
+      <circle cx="26" cy="27" r="13" fill="#0866ff"/><text x="26" y="32" font-size="14" font-weight="800" fill="#fff" text-anchor="middle">4</text>
+      <text x="48" y="32" font-size="16" font-weight="700" fill="#fff">Write</text>
+      <text x="16" y="58" font-size="13" fill="#cfe1ff">in your voice, with no</text>
+      <text x="16" y="75" font-size="13" fill="#cfe1ff">template phrases</text>
+    </g>
+    <g transform="translate(952 686)">
+      <rect width="200" height="84" rx="12" fill="#150f2a" stroke="#ff3fa4"/>
+      <circle cx="26" cy="27" r="13" fill="#ff3fa4"/><text x="26" y="32" font-size="14" font-weight="800" fill="#1a0012" text-anchor="middle">5</text>
+      <text x="48" y="32" font-size="16" font-weight="700" fill="#fff">Send</text>
+      <text x="16" y="58" font-size="13" fill="#a49cc4">draft + MP3 clip open</text>
+      <text x="16" y="75" font-size="13" fill="#a49cc4">in your own mail app</text>
+    </g>
+    <g fill="#a49cc4">
+      <path d="M258 722l10 6-10 6z"/><path d="M484 722l10 6-10 6z"/><path d="M710 722l10 6-10 6z"/><path d="M936 722l10 6-10 6z"/>
+    </g>
+  </g>
+</svg>
