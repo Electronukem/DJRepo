@@ -1137,6 +1137,42 @@ body[data-section="break"] #section { color: #a9e8ff; }
   .gig-panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
 }
 
+/* voice commands: what Muse Voice Transcribe heard, and what it did */
+#hud > .heard { pointer-events: none; }
+
+.heard {
+  position: absolute;
+  left: 50%;
+  bottom: 160px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 10px 18px;
+  border: 1px solid rgba(77, 148, 255, 0.6);
+  border-radius: 999px;
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 26px rgba(8, 102, 255, 0.35);
+  font-size: 15px;
+  transform: translateX(-50%);
+  animation: heard-in 0.25s ease-out both;
+}
+
+@keyframes heard-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+.heard-dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: #4d94ff; }
+.heard.listening .heard-dot { background: #ff4d6d; animation: mic-pulse 0.9s ease-in-out infinite; }
+.heard.thinking .heard-dot { animation: mic-pulse 0.5s ease-in-out infinite; }
+.heard.error { border-color: rgba(255, 159, 182, 0.5); box-shadow: none; }
+.heard.error .heard-dot { background: var(--error); }
+#heard-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+@keyframes mic-pulse { 50% { transform: scale(1.5); opacity: 0.55; } }
+
+#voice.on, #d-voice.on { background: rgba(255, 77, 109, 0.25); color: #ff8fa3; box-shadow: 0 0 14px rgba(255, 77, 109, 0.5); }
+
 /* with the controls in their own window, this one is all show */
 body.remote .controls,
 body.remote .panel { display: none !important; }
@@ -1274,6 +1310,8 @@ body.battle #caption[data-deck="1"] #caption-tag { color: var(--cool); }
   #mixer-toggle svg { display: none; }
   #add .wide { display: none; }
   #pop-out { display: none; }  /* a phone has no second window to put it in */
+  #voice { display: none; }  /* nor room for the mic; voice commands are for the decks */
+  .heard { bottom: 140px; font-size: 13.5px; }
   .cooking-step { max-width: 60vw; }
   .deck-inputs { flex-direction: column; }
   #repo-url, #repo-url-b { width: 100%; }

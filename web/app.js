@@ -2266,9 +2266,10 @@ const DECK_COMMANDS = {
   announcer: (on) => setAnnouncer(on),
   add: (url) => typeof url === 'string' && addContender(url),
   addSong: (file) => file instanceof Blob && addContender(file),
+  voice: (text) => typeof text === 'string' && text.trim() && hearCommand(text.trim().slice(0, 200)),
   stopCooking: () => stopCooking(),
 };
-const NEEDS_A_SET = new Set(['drop', 'genre', 'lead', 'mash', 'channel', 'reset', 'add', 'addSong', 'stopCooking']);
+const NEEDS_A_SET = new Set(['drop', 'genre', 'lead', 'mash', 'channel', 'reset', 'add', 'addSong', 'voice', 'stopCooking']);
 
 if (deckLink) {
   deckLink.addEventListener('message', ({ data }) => {
@@ -2293,6 +2294,125 @@ if (deckLink) {
   setInterval(() => {
     if (deckSeen && !deckConnected()) deckGone();  // closed without saying goodbye
   }, 2000);
+}
+
+// ---------------------------------------------------------------------------
+// Voice commands: hold V (or the mic), say it, let go. Meta's Muse Voice Transcribe writes it down
+// (voice.js), and this works out what you meant. The music dips while you talk.
+
+const heardBox = $('#heard');
+let heardTimer = null;
+
+function showHeard(state, text) {
+  clearTimeout(heardTimer);
+  heardBox.className = `heard ${state}`;
+  $('#heard-text').textContent = text;
+  heardBox.hidden = false;
+  if (state === 'done' || state === 'error') heardTimer = setTimeout(() => (heardBox.hidden = true), 4500);
+}
+
+async function voiceDown() {
+  if (!world || talking()) return;
+  if (DEMO) {
+    showHeard('error', 'Voice commands need the DJRepo server: run it with docker compose up.');
+    return;
+  }
+  try {
+    await talkStart();
+    music.duck(true);
+    $('#voice').classList.add('on');
+    showHeard('listening', 'Listening… let go when you’re done');
+  } catch (err) {
+    showHeard('error', err.message);
+  }
+}
+
+async function voiceUp() {
+  if (!talking()) return;
+  music.duck(false);
+  $('#voice').classList.remove('on');
+  showHeard('thinking', 'Muse Voice Transcribe is writing it down…');
+  try {
+    const text = await talkStop();
+    if (text) hearCommand(text);
+    else heardBox.hidden = true;
+  } catch (err) {
+    showHeard('error', err.message);
+  }
+}
+
+function hearCommand(text) {
+  showHeard('done', `Muse Voice heard “${text.replace(/[.!?]+$/, '')}” → ${runVoice(text)}`);
+}
+
+const SPOKEN_GENRES = [['drum and bass', 'dnb'], ['drum n bass', 'dnb'], ['drum & bass', 'dnb'], ['dnb', 'dnb'], ['jungle', 'dnb'],
+  ['big room', 'bigroom'], ['bigroom', 'bigroom'], ['techno', 'techno'], ['trance', 'trance'], ['house', 'house']];
+
+// What a DJ might shout at the decks, and what it does. Returns what was done, for the bubble.
+function runVoice(text) {
+  if (!world) return 'nothing is playing';
+  const said = ` ${text.toLowerCase().replace(/[“”"!?,]|\.(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim()} `;
+  const bring = said.match(/\b(?:bring in|bring on|add|battle|versus|vs)\s+(.+?)\s*$/);
+  if (bring) {
+    const url = spokenRepo(bring[1]);
+    if (!url) return 'say the owner and the repo, like “bring in facebook react”';
+    if (cooking) return `already cooking ${cooking.name}`;
+    addContender(url);
+    return `bringing in ${url}`;
+  }
+  if (/\b(drop|sync|let it go|hit it|send it)\b/.test(said)) {
+    dropNow();
+    return world.battle ? 'syncing up' : 'dropping';
+  }
+  if (/\b(unmute|sound on|bring it back)\b/.test(said)) {
+    if (music.muted) toggleSound();
+    return 'sound on';
+  }
+  if (/\b(mute|silence|kill it|sound off)\b/.test(said)) {
+    if (!music.muted) toggleSound();
+    return 'muted';
+  }
+  if (/\b(louder|turn it up|volume up|pump it up)\b/.test(said)) {
+    setVolume(music.volume + 0.15);
+    return `volume ${Math.round(music.volume * 100)}%`;
+  }
+  if (/\b(quieter|softer|turn it down|volume down)\b/.test(said)) {
+    setVolume(music.volume - 0.15);
+    return `volume ${Math.round(music.volume * 100)}%`;
+  }
+  const genre = SPOKEN_GENRES.find(([words]) => said.includes(` ${words} `));
+  if (genre) {
+    // The deck that's playing (or the first repo, if that's a song).
+    const playing = typeof world.pos.deck === 'number' ? world.pos.deck : 0;
+    const deck = world.graphs[playing]?.scene.song ? world.graphs.findIndex((g) => !g.scene.song) : playing;
+    applyGenre(genre[1], deck);
+    return `${GENRES[genre[1]].name}${world.battle ? ` on ${world.graphs[deck].short}` : ''}`;
+  }
+  const lead = Object.entries(LEADS).find(([id, l]) => said.includes(` ${l.name.toLowerCase()} `) || said.includes(` ${id} `));
+  if (lead) {
+    applyLead(lead[0]);
+    return `lead: ${lead[1].name}`;
+  }
+  if (/\b(lights|flashes|strobe) off\b/.test(said)) {
+    setFlashes(false);
+    return 'flashing lights off';
+  }
+  if (/\b(lights|flashes|strobe) on\b/.test(said)) {
+    setFlashes(true);
+    return 'flashing lights on';
+  }
+  return 'not a command I know (try “drop it”, “techno”, “louder”, or “bring in facebook react”)';
+}
+
+// "facebook react" → facebook/react; "facebook research slash segment anything" works too.
+function spokenRepo(words) {
+  const w = words.replace(/\s+slash\s+/g, '/').replace(/\s+dash\s+/g, '-').replace(/\s+dot\s+/g, '.').trim();
+  if (w.includes('/')) {
+    const [owner, ...rest] = w.split('/');
+    return `${owner.replace(/\s+/g, '')}/${rest.join('/').trim().replace(/\s+/g, '-')}`;
+  }
+  const parts = w.split(/\s+/).filter(Boolean);
+  return parts.length >= 2 ? `${parts[0]}/${parts.slice(1).join('-')}` : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -2444,11 +2564,24 @@ window.addEventListener('keydown', (e) => {
   if (key === 'x') togglePanel('mixer');
   if (key === 'd') dropNow();
   if (key === 'c') openDeck();
+  if (key === 'v' && !e.repeat) voiceDown();  // hold to talk
   if (key === 'a') {
     e.preventDefault();  // or the A lands in the box that's about to get focus
     togglePanel('add');
   }
 });
+window.addEventListener('keyup', (e) => {
+  if (e.key.toLowerCase() === 'v') voiceUp();
+});
+window.addEventListener('blur', voiceUp);  // let go of the key in another window: stop listening
+const mic = $('#voice');
+mic.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  mic.setPointerCapture(e.pointerId);
+  voiceDown();
+});
+for (const type of ['pointerup', 'pointercancel']) mic.addEventListener(type, voiceUp);
+mic.hidden = DEMO;
 window.addEventListener('resize', resize);
 
 resize();

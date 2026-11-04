@@ -5,7 +5,7 @@
 **Your GitHub repo, played as a live EDM set with a light show.**<br>
 Battle two repos, or your code against a song. Bring in challengers mid-set. Then let Meta's Muse Spark find you a real gig.
 
-[![Built with Meta Muse Spark](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark-0866FF)](#built-with-meta)
+[![Built with Meta Muse Spark and Muse Voice](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark%20%C2%B7%20Muse%20Voice-0866FF)](#built-with-meta)
 [![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)](#built-with-meta)
 [![CI](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml/badge.svg)](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml)
 [![Live demo](https://img.shields.io/badge/live%20demo-no%20install-ff3fa4)](https://electronukem.github.io/DJRepo/)
@@ -51,9 +51,12 @@ the light show need no keys. The gig finder needs two ([Keys](#keys)).
 4. **A new contender.** Press **A** mid-set and paste another repo, or drop in a song. The music never
    stops: *"Meta is cooking"* while it loads, then the room builds up, a title card slams in, and the
    newcomer crashes onto the stage on the drop. Winner stays on.
-5. **The control deck.** Press **C** to move every control to a second window, so the show stays
+5. **Talk to the decks.** Hold **V** (or the mic button) and say "drop it", "techno", "louder" or
+   "bring in facebook react". Meta's **Muse Voice Transcribe** writes it down in about a second, the
+   decks do it, and the screen shows what it heard. The music dips while you talk.
+6. **The control deck.** Press **C** to move every control to a second window, so the show stays
    full screen and clean on the big screen while you DJ from your laptop.
-6. **Find a gig.** Real upcoming dance and electronic nights on a map (it opens on Boston). Pick one
+7. **Find a gig.** Real upcoming dance and electronic nights on a map (it opens on Boston). Pick one
    and **Muse Spark** researches the room, the night and who books it, then drafts a booking email
    in your voice with a clip of your set attached.
 
@@ -74,14 +77,16 @@ the light show need no keys. The gig finder needs two ([Keys](#keys)).
 
 ## Built with Meta
 
-The gig finder runs on **Muse Spark** (`muse-spark-1.3`) through the
-[Meta Model API](https://dev.meta.ai). Every step uses a different part of the platform:
+DJRepo uses two Meta models through the [Meta Model API](https://dev.meta.ai): **Muse Spark**
+(`muse-spark-1.3`) for the gig finder, and **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) for
+voice commands. Each step uses a different part of the platform:
 
 | Step | Meta Model API | What it does |
 | --- | --- | --- |
-| **Research** | Responses API + `web_search` (search grounding), `reasoning.effort: low` | Looks into the venue, the night, the promoter and how they take bookings, with citations |
-| **Facts** | Chat Completions + strict `json_schema` | Pulls out the room, the night, a current detail a regular would know, the booking contact and the genre that fits |
-| **Write** | Chat Completions, `reasoning_effort: medium` | Writes 70–130 words in the DJ's own voice, then rewrites once if any template phrase slips in |
+| **Research** | Muse Spark: Responses API + `web_search` (search grounding), `reasoning.effort: low` | Looks into the venue, the night, the promoter and how they take bookings, with citations |
+| **Facts** | Muse Spark: Chat Completions + strict `json_schema` | Pulls out the room, the night, a current detail a regular would know, the booking contact and the genre that fits |
+| **Write** | Muse Spark: Chat Completions, `reasoning_effort: medium` | Writes 70–130 words in the DJ's own voice, then rewrites once if any template phrase slips in |
+| **Voice** | Muse Voice Transcribe: `asr/transcribe`, push to talk | Turns "drop it" or "bring in facebook react" into an action on the decks in about a second |
 
 Then DJRepo renders a clip of your repo's set in the genre Muse Spark picked (a four-bar build-up
 into a sixteen-bar drop, MP3), and **Email them** opens the draft in your own mail app with the clip
@@ -228,7 +233,11 @@ plays in tune. On full sets DJRepo renders itself (house, techno, drum & bass), 
 tempo within 0.003 BPM, bar lines within 6 ms, and all three keys right. A song takes about half a
 second to analyse.
 
-**The gig finder**, with 39 tests ([`tests/`](tests/)), including:
+**Voice commands:** Muse Voice Transcribe wrote down all four spoken test commands correctly ("drop
+it", "bring in Facebook React", "switch to techno", "turn it up"), in about a second each. In Chrome,
+a test microphone said "drop it" and the set built up into a drop.
+
+**The gig finder, server and voice**, with 42 tests ([`tests/`](tests/)), including:
 
 - A booking address is used only if it's on a page DJRepo read. A name is used only if a page names
   that person.
@@ -249,6 +258,7 @@ phrases made it into the final drafts.
 | --- | --- |
 | **D** | Skip to the next drop. In a battle: sync the decks into one drop |
 | **A** | Bring in another repo, or a song, while the set plays |
+| **V** | Hold to talk: "drop it", "sync", "techno", "louder", "mute", "supersaw", "bring in facebook react" |
 | **C** | Put the controls in a window of their own |
 | **X** | Mixer |
 | **F** | Full screen |
@@ -265,7 +275,7 @@ The set and the light show need no keys. The gig finder needs two, in a `.env` f
 | Key | What for | Where |
 | --- | --- | --- |
 | `TICKETMASTER_API_KEY` | Real upcoming events | Free, at [developer.ticketmaster.com](https://developer.ticketmaster.com) (Discovery API) |
-| `MODEL_API_KEY` | Muse Spark research and writing | [dev.meta.ai](https://dev.meta.ai) |
+| `MODEL_API_KEY` | Muse Spark research and writing, and voice commands | [dev.meta.ai](https://dev.meta.ai) |
 
 Docker Compose reads `.env` when the container starts; keys are never copied into the image. A draft
 takes two or three minutes (most of it is the web search), and starts the moment you pick a gig, so
@@ -296,6 +306,7 @@ y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Option
 | [`web/deck.html`](web/deck.html), [`web/deck.js`](web/deck.js) | The control deck window |
 | [`web/gigs.js`](web/gigs.js), [`web/sample.js`](web/sample.js) | The gig finder screen, and the offline clip renderer |
 | [`web/song.js`](web/song.js), [`web/song-worker.js`](web/song-worker.js) | A song as a deck: decoding it, and the listener that finds its beat, key and shape |
+| [`voice.py`](voice.py), [`web/voice.js`](web/voice.js) | Voice commands: recording, and Muse Voice Transcribe |
 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | One-command setup |
 | [`tests/`](tests/) | The gig finder's and server's tests (`python -m pytest`), and the listener benchmark (`node tests/listener-benchmark.mjs`) |
 | [`demo/`](demo/), [`.github/workflows/`](.github/workflows/) | The live demo's pre-built repos and demo song, and the CI and Pages workflows |

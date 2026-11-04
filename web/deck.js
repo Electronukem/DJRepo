@@ -260,10 +260,43 @@ setInterval(() => {
   }
 }, 1000);
 
+// Voice commands from here: this window records and gets the words written down (voice.js), and the
+// show works out what they mean and shows what it heard.
+async function deckTalk(down) {
+  const mic = $('#d-voice');
+  try {
+    if (down) {
+      if (!state || !state.playing || talking()) return;
+      await talkStart();
+      mic.classList.add('on');
+      showNotice('Listening… let go when you’re done');
+    } else if (talking()) {
+      mic.classList.remove('on');
+      showNotice('Muse Voice Transcribe is writing it down…');
+      const text = await talkStop();
+      if (text) send('voice', text);
+    }
+  } catch (err) {
+    mic.classList.remove('on');
+    showNotice(err.message);
+  }
+}
+
+$('#d-voice').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  $('#d-voice').setPointerCapture(e.pointerId);
+  deckTalk(true);
+});
+for (const type of ['pointerup', 'pointercancel']) $('#d-voice').addEventListener(type, () => deckTalk(false));
+window.addEventListener('keyup', (e) => {
+  if (e.key.toLowerCase() === 'v') deckTalk(false);
+});
+
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target instanceof HTMLInputElement && e.target.type === 'text') return;
   const key = e.key.toLowerCase();
+  if (key === 'v' && !e.repeat) deckTalk(true);
   if (key === 'd') send('drop');
   if (key === 'm') send('sound');
   if (key === 'a') {

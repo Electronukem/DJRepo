@@ -23,6 +23,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import gigs
+import voice
 from common import CACHE_DIR, INSTALL_HINT, JOBS, ROOT, WEB_DIR, BuildError, Job, graphify_command, rmtree, start_job, \
     stream, summarize_graph
 
@@ -377,6 +378,9 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self) -> None:
+        if self.path == "/api/voice":
+            self._voice()
+            return
         # Requiring JSON means other websites can't quietly trigger work from a browser tab.
         if "application/json" not in self.headers.get("Content-Type", ""):
             self._json({"error": "Expected JSON."}, 415)
@@ -442,6 +446,23 @@ class Handler(SimpleHTTPRequestHandler):
         fingerprint = json.dumps([profile, sorted(clips)], sort_keys=True)
         job = start_job(("pitch", str(event["id"]), fingerprint), lambda job: gigs.pitch(job, event, profile, clips))
         self._json({"job": job.id})
+
+    def _voice(self) -> None:
+        """A push-to-talk recording, written down by Muse Voice Transcribe."""
+        # audio/wav, like JSON, isn't a type a plain cross-site form can send, so other sites can't post here.
+        if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "audio/wav":
+            self._json({"error": "Expected a WAV recording."}, 415)
+            return
+        length = int(self.headers.get("Content-Length") or 0)
+        if not 0 < length <= voice.MAX_BYTES:
+            self._json({"error": "That recording is too long. Hold the button just while you speak."}, 413)
+            return
+        try:
+            text = voice.transcribe(self.rfile.read(length))
+        except BuildError as exc:
+            self._json({"error": str(exc)}, 502)
+            return
+        self._json({"text": text})
 
     def _json(self, payload: dict, status: int = 200) -> None:
         data = json.dumps(payload).encode("utf-8")

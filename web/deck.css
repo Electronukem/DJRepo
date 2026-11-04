@@ -117,6 +117,7 @@ body.deck[data-section="break"] #d-section { color: #a9e8ff; }
 
 .d-drop:disabled { opacity: 0.4; cursor: default; }
 
+#d-voice svg, #d-sound svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 #d-sound .cross { display: none; }
 #d-sound.muted .cross { display: inline; }
 #d-sound.muted .waves { display: none; }

@@ -51,7 +51,7 @@
     <div id="recent" class="recent" hidden></div>
     <p id="error" class="error" role="alert" hidden></p>
     <div id="notice" class="notice" hidden></div>
-    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo or a song, X opens the mixer,
+    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo or a song, hold V to talk (“drop it”, “techno”), X opens the mixer,
       C puts the controls in their own window, F is full screen and M is mute.</p>
   </main>
 
@@ -252,6 +252,11 @@
       <button id="reset-mix" class="ghost" type="button">Back to the suggested mix</button>
     </aside>
 
+    <div id="heard" class="heard" aria-live="polite" hidden>
+      <span class="heard-dot" aria-hidden="true"></span>
+      <span id="heard-text"></span>
+    </div>
+
     <div id="caption" class="fading">
       <p id="caption-tag"></p>
       <p id="caption-msg"></p>
@@ -274,6 +279,9 @@
       <button id="pop-out" class="icon" type="button" aria-label="Controls in a new window" title="Controls in a new window (C)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-8 8"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
       </button>
+      <button id="voice" class="icon" type="button" aria-label="Voice command: hold to talk (V)" title="Hold to talk (V): “drop it”, “techno”, “bring in facebook react”">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </button>
       <button id="add" class="ghost with-icon" type="button" aria-expanded="false" aria-controls="add-panel" title="Bring in another repo (A)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         <span class="wide">Add repo</span>
@@ -292,6 +300,7 @@
   <script src="genres.js"></script>
   <script src="dj.js"></script>
   <script src="song.js"></script>
+  <script src="voice.js"></script>
   <script src="app.js"></script>
   <script src="sample.js"></script>
   <script src="gigs.js"></script>
