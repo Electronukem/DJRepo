@@ -2449,7 +2449,7 @@ function wake() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
     const open = Object.values(PANELS).some(([panel]) => !$(panel).hidden);
-    if (world && !open && cookingBox.hidden) document.body.classList.add('idle');
+    if (world && !open && cookingBox.hidden && $('#gigs').hidden) document.body.classList.add('idle');
   }, 3500);
 }
 
@@ -2540,6 +2540,7 @@ $('#about').addEventListener('click', () => togglePanel('about'));
 $('#mixer-toggle').addEventListener('click', () => togglePanel('mixer'));
 $('#add').addEventListener('click', () => togglePanel('add'));
 $('#pop-out').addEventListener('click', openDeck);
+$('#gigs-open').addEventListener('click', () => openGigFinder());
 $('#cooking-close').addEventListener('click', stopCooking);
 $('#add-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -2554,11 +2555,20 @@ for (const type of ['pointermove', 'pointerdown', 'keydown', 'touchstart']) {
   window.addEventListener(type, wake, { passive: true });
 }
 window.addEventListener('pointerdown', () => music.unlock());
+// Typing somewhere (a repo, an email) never fires a shortcut.
+const TYPING = 'textarea, select, [contenteditable], input:not([type]), input[type=text], input[type=email], input[type=search], input[type=url]';
+
 window.addEventListener('keydown', (e) => {
   if (!world || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Finding a gig while the set plays: the show's keys wait, and Esc goes back to it.
+  if (!$('#gigs').hidden) {
+    if (e.key === 'Escape' && !e.target.closest?.(TYPING)) leaveGigs();
+    return;
+  }
   if (e.key === 'Escape') closePanels();
-  if (e.target instanceof HTMLInputElement && e.target.type === 'text') return;
+  if (e.target.closest?.(TYPING)) return;
   const key = e.key.toLowerCase();
+  if (key === 'g') openGigFinder();
   if (key === 'f') toggleFullscreen();
   if (key === 'm') toggleSound();
   if (key === 'x') togglePanel('mixer');

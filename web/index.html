@@ -51,7 +51,7 @@
     <div id="recent" class="recent" hidden></div>
     <p id="error" class="error" role="alert" hidden></p>
     <div id="notice" class="notice" hidden></div>
-    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo or a song, hold V to talk (“drop it”, “techno”), X opens the mixer,
+    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), A brings in another repo or a song, hold V to talk (“drop it”, “techno”), G finds a gig while it plays, X opens the mixer,
       C puts the controls in their own window, F is full screen and M is mute.</p>
   </main>
 
@@ -68,6 +68,7 @@
         <h2>Find a gig</h2>
         <button id="gig-play" class="ghost" type="button">Play the set</button>
       </header>
+      <p id="gig-live" class="gig-live" hidden><span class="live-dot" aria-hidden="true"></span>Your set is still playing. Esc takes you back to it.</p>
       <p class="gig-lede">Real upcoming dance and electronic nights. Pick one and Muse Spark looks into the room,
         the night and who books it, then drafts an email from you with a clip of <b id="gig-repo"></b> in the genre that suits it.
         It opens in your own mail app for you to read and send.</p>
@@ -285,6 +286,10 @@
       <button id="add" class="ghost with-icon" type="button" aria-expanded="false" aria-controls="add-panel" title="Bring in another repo (A)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         <span class="wide">Add repo</span>
+      </button>
+      <button id="gigs-open" class="ghost with-icon" type="button" title="Find a gig while the set plays (G)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>
+        <span class="wide">Find a gig</span>
       </button>
       <button id="mixer-toggle" class="ghost with-icon" type="button" aria-expanded="false" aria-controls="mixer" title="Mixer (X)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M12 4v16M18 4v16"/><path d="M4 14h4M10 8h4M16 16h4"/></svg>

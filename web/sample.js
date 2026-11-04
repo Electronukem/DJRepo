@@ -64,7 +64,12 @@ async function renderSample(scene, genre) {
   clearInterval(dj.timer);  // the clock is moved by hand below, not by a timer
   dj.timer = null;
   dj.onBar = commitRiffs(scene, set, dj);
-  for (dj.clock = 0; dj.clock + LOOKAHEAD < end; dj.clock += 0.05) dj.tick();
+  // A couple of seconds of music at a time, so a set playing live never waits on the clip.
+  for (let n = 0, clock = 0; clock + LOOKAHEAD < end; clock += 0.05, n++) {
+    dj.clock = clock;
+    dj.tick();
+    if (n % 40 === 39) await new Promise((resolve) => setTimeout(resolve, 0));
+  }
   dj.crash(end, 1);
   const at = dj.toAudio(end);
   dj.master.gain.setValueAtTime(dj.master.gain.value, at);
@@ -100,7 +105,7 @@ async function mp3Blob(buffer) {
   const right = pcm(buffer.getChannelData(buffer.numberOfChannels > 1 ? 1 : 0));
   const encoder = new lamejs.Mp3Encoder(2, buffer.sampleRate, MP3_KBPS);
   const parts = [];
-  const block = 1152 * 40;
+  const block = 1152 * 10;  // small slices: a set may be playing live on the same page
   for (let i = 0; i < left.length; i += block) {
     const chunk = encoder.encodeBuffer(left.subarray(i, i + block), right.subarray(i, i + block));
     if (chunk.length) parts.push(new Uint8Array(chunk));

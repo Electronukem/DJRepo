@@ -29,7 +29,15 @@ const gig = {
 // ---------------------------------------------------------------------------
 // Getting there from the start screen
 
+// From a set that's playing, the repo on the decks is the sample, and the music carries on underneath.
+// From the start screen, the repo in the box is built first.
 async function openGigFinder() {
+  if (world) {
+    const repo = world.graphs.find((g) => !g.scene.song) || world.graphs[0];  // a song isn't a repo to pitch
+    closePanels();
+    enterGigs(repo.scene);
+    return;
+  }
   const url = $('#repo-url').value.trim();
   if (!url) {
     showError('Paste the repo your sample should come from, then find a gig.');
@@ -42,21 +50,41 @@ async function openGigFinder() {
   showScreen('progress');
   try {
     const [scene] = await buildScenes([url], { refresh: $('#refresh').checked });
-    if (gig.scene !== scene) gig.samples.clear();
-    gig.scene = scene;
-    gig.clips = sampleClips(scene);
-    gig.drafts.clear();
-    showScreen('gigs');
-    $('#gig-repo').textContent = `${scene.repo.owner}/${scene.repo.name}`;
-    setUpMap();
-    checkKeys();
-    const place = loadPlace() || { city: HOME.city };
-    if (place.city && !$('#gig-city').value) $('#gig-city').value = place.city;
-    if (!gig.events.length && health && health.keys && health.keys.events) search(place);
+    enterGigs(scene);
   } catch (err) {
     showScreen('intro');
     showError(err.message || String(err));
   }
+}
+
+function enterGigs(scene) {
+  const same = gig.scene && gig.scene.repo.url === scene.repo.url;
+  if (!same) {  // drafts and clips belong to the repo they were made from
+    gig.samples.clear();
+    gig.drafts.clear();
+    gig.selected = null;
+    renderGig();
+  }
+  gig.scene = scene;
+  gig.clips = sampleClips(scene);
+  showScreen('gigs');
+  $('#gig-repo').textContent = `${scene.repo.owner}/${scene.repo.name}`;
+  $('#gig-back').textContent = world ? 'Back to the set' : 'Back';
+  $('#gig-play').hidden = Boolean(world);  // it's already playing
+  $('#gig-live').hidden = !world;
+  setUpMap();
+  checkKeys();
+  const place = loadPlace() || { city: HOME.city };
+  if (place.city && !$('#gig-city').value) $('#gig-city').value = place.city;
+  if (!gig.events.length && health && health.keys && health.keys.events) search(place);
+}
+
+// Back to the set (or the start screen), with any clip preview stopped.
+function leaveGigs() {
+  const player = $('#clip-player');
+  if (!player.paused) player.pause();
+  showScreen(world ? 'hud' : 'intro');
+  if (world) wake();
 }
 
 const DEMO_GIGS = 'In this live demo there is no server, so it can\'t search Ticketmaster or ask Muse Spark. '
@@ -393,7 +421,10 @@ function saveProfile() {
 // Wiring
 
 $('#find-gig').addEventListener('click', openGigFinder);
-$('#gig-back').addEventListener('click', () => showScreen('intro'));
+$('#gig-back').addEventListener('click', leaveGigs);
+// Previewing a clip dips the set playing underneath.
+$('#clip-player').addEventListener('play', () => world && music.duck(true));
+for (const type of ['pause', 'ended']) $('#clip-player').addEventListener(type, () => music.duck(false));
 $('#gig-play').addEventListener('click', () => {
   if (!gig.scene) return;
   music.unlock();

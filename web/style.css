@@ -994,6 +994,21 @@ body[data-section="break"] #section { color: #a9e8ff; }
 }
 
 .gig-lede { margin: 0; color: var(--muted); }
+
+.gig-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 63, 164, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 63, 164, 0.08);
+  color: #ffc2e2;
+  font-size: 12.5px;
+}
+
+.live-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--hot); box-shadow: 0 0 10px var(--hot); animation: mic-pulse 1s ease-in-out infinite; }
 .gig-lede b { color: var(--ink); font-weight: 500; overflow-wrap: anywhere; }
 .gigs .notice { margin: 0; max-width: none; font-size: 13px; }
 
@@ -1311,6 +1326,7 @@ body.battle #caption[data-deck="1"] #caption-tag { color: var(--cool); }
   #add .wide { display: none; }
   #pop-out { display: none; }  /* a phone has no second window to put it in */
   #voice { display: none; }  /* nor room for the mic; voice commands are for the decks */
+  #gigs-open .wide { display: none; }
   .heard { bottom: 140px; font-size: 13.5px; }
   .cooking-step { max-width: 60vw; }
   .deck-inputs { flex-direction: column; }

@@ -58,7 +58,8 @@ the light show need no keys. The gig finder needs two ([Keys](#keys)).
    full screen and clean on the big screen while you DJ from your laptop.
 7. **Find a gig.** Real upcoming dance and electronic nights on a map (it opens on Boston). Pick one
    and **Muse Spark** researches the room, the night and who books it, then drafts a booking email
-   in your voice with a clip of your set attached.
+   in your voice with a clip of your set attached. It works mid-set too: press **G** (or **Find a gig** in the
+   controls) and the music keeps playing underneath while you look.
 
 <table>
   <tr>
@@ -258,6 +259,7 @@ phrases made it into the final drafts.
 | --- | --- |
 | **D** | Skip to the next drop. In a battle: sync the decks into one drop |
 | **A** | Bring in another repo, or a song, while the set plays |
+| **G** | Find a gig while the set keeps playing (Esc goes back to it) |
 | **V** | Hold to talk: "drop it", "sync", "techno", "louder", "mute", "supersaw", "bring in facebook react" |
 | **C** | Put the controls in a window of their own |
 | **X** | Mixer |
