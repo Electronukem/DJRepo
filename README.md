@@ -9,6 +9,7 @@ Battle two repos. Bring in challengers mid-set. Then let Meta's Muse Spark find 
 ![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)
 ![One command](https://img.shields.io/badge/run%20it-docker%20compose%20up-ff3fa4)
 ![No samples](https://img.shields.io/badge/audio-100%25%20synthesised-ffd23f)
+![MIT license](https://img.shields.io/badge/license-MIT-3fd2ff)
 
 <img src="docs/screenshots/new-contender.webp" alt="A new repo slams into the set mid-battle under a full-screen 'A NEW CONTENDER HAS ARRIVED' title card" width="100%">
 
@@ -228,3 +229,7 @@ y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Option
 - The page loads d3, Leaflet and lamejs from cdnjs, map tiles and place search from OpenStreetMap,
   and fonts from Google Fonts, so it needs an internet connection.
 - The server listens only on this machine (127.0.0.1). The Docker setup publishes it to localhost only.
+
+## License
+
+[MIT](LICENSE). Remix it.
