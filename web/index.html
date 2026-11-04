@@ -17,12 +17,17 @@
     <h1>DJRepo</h1>
     <p class="lede">
       Paste a GitHub repository. graphify maps its code, your commits become the set,
-      and the whole thing builds up and drops.
+      and the whole thing builds up and drops. Add a second repo and they battle.
     </p>
     <form id="repo-form" autocomplete="off">
-      <label for="repo-url" class="sr-only">GitHub repository</label>
-      <input id="repo-url" name="url" type="text" inputmode="url" placeholder="github.com/owner/repository" spellcheck="false" required>
-      <button type="submit">Drop it</button>
+      <div class="deck-inputs">
+        <label for="repo-url" class="sr-only">GitHub repository</label>
+        <input id="repo-url" name="url" type="text" inputmode="url" placeholder="github.com/owner/repository" spellcheck="false" required>
+        <span class="vs-tag" aria-hidden="true">VS</span>
+        <label for="repo-url-b" class="sr-only">A second repository to battle (optional)</label>
+        <input id="repo-url-b" name="url-b" type="text" inputmode="url" placeholder="a second repo to battle (optional)" spellcheck="false">
+      </div>
+      <button id="go" type="submit">Drop it</button>
     </form>
     <div class="checks">
       <label class="check"><input type="checkbox" id="refresh"> Fetch it fresh instead of using the saved copy</label>
@@ -31,7 +36,7 @@
     <div id="recent" class="recent" hidden></div>
     <p id="error" class="error" role="alert" hidden></p>
     <div id="notice" class="notice" hidden></div>
-    <p class="hint">Turn it up. Once it starts: D drops, X opens the mixer, F is full screen and M is mute.</p>
+    <p class="hint">Turn it up. Once it starts: D drops (or syncs a battle), X opens the mixer, F is full screen and M is mute.</p>
   </main>
 
   <section id="progress" class="screen" hidden aria-live="polite">
@@ -43,14 +48,22 @@
   <div id="hud" hidden>
     <div class="phrase" aria-hidden="true"><div id="phrase-fill"></div></div>
     <header class="hud-top fade">
-      <div>
+      <div class="deck-a">
         <a id="repo-name" target="_blank" rel="noopener"></a>
         <p id="mood"></p>
+      </div>
+      <div id="vs" class="vs" hidden aria-hidden="true">
+        <div class="meter"><span id="meter-a"></span></div>
+      </div>
+      <div class="deck-b" hidden>
+        <a id="repo-name-b" target="_blank" rel="noopener"></a>
+        <p id="mood-b"></p>
       </div>
       <div class="deck-state">
         <p id="section" aria-live="polite"></p>
         <div id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
         <p id="countdown"></p>
+        <p id="bpm"></p>
       </div>
     </header>
 
@@ -61,7 +74,14 @@
     <aside id="mixer" class="panel mixer" hidden aria-label="Mixer">
       <section>
         <h2>Genre</h2>
+        <p id="genres-a-label" class="deck-label a" hidden></p>
         <div id="genres" class="chips" role="group" aria-label="Genre"></div>
+        <p id="genres-b-label" class="deck-label b" hidden></p>
+        <div id="genres-b" class="chips" role="group" aria-label="Second deck's genre" hidden></div>
+      </section>
+      <section id="mashup" hidden>
+        <h2>Mashup <span>who brings what to the drop you make together</span></h2>
+        <div id="mash-rows"></div>
       </section>
       <section>
         <h2>Lead synth <span>plays the graph</span></h2>

@@ -3,43 +3,44 @@
 Turn a GitHub repository into an EDM set with a light show.
 [graphify](https://github.com/Graphify-Labs/graphify) maps the code into a graph, the repository's
 history picks the genre, key and tempo, and your commits drop on the beat while the camera slams in
-and out with the kick.
+and out with the kick. Give it two repositories and they battle, then sync up into one big drop.
 
 A sibling of [Mindfulness](https://github.com/Electronukem/Mindfulness), which does the same thing
 calmly.
 
-## Setup
+## Run
 
 You need Python 3.11+ and git.
 
+- **Windows:** double-click `start.bat`.
+- **macOS or Linux:** run `./start.sh`.
+
+DJRepo keeps its own Python environment in `.venv`. The first run creates it and installs graphify
+into it, which takes a minute; after that it starts straight away. A browser tab opens at
+http://127.0.0.1:8777.
+
+To set it up by hand instead:
+
 ```
 python -m venv .venv
-.venv\Scripts\pip install graphifyy
+.venv\Scripts\pip install -r requirements.txt     (macOS/Linux: .venv/bin/pip)
+.venv\Scripts\python server.py
 ```
 
-(The PyPI name is `graphifyy` with two y's. On macOS or Linux use `.venv/bin/pip`.) Code is parsed
-locally, so no AI model or API key is needed.
+(The PyPI name is `graphifyy` with two y's.) Code is parsed locally, so no AI model or API key is
+needed. Options: `server.py --port 9000 --max-nodes 800 --no-browser`
 
-## Run
-
-```
-python server.py
-```
-
-On Windows, double-click `start.bat` instead. It uses the project's `.venv` if there is one. A browser
-tab opens at http://127.0.0.1:8777. Paste a public repository (`https://github.com/owner/repo`,
-`owner/repo`, or a `/tree/<branch>` link) and press **Drop it**.
+Paste a public repository (`https://github.com/owner/repo`, `owner/repo`, or a `/tree/<branch>`
+link) and press **Drop it**. Fill in the second box too and the button becomes **Battle**.
 
 | Key | Does |
 | --- | --- |
-| D | Skip to the next drop (a four-bar build-up, then the drop) |
-| X | Mixer: genre, lead synth, channels and visuals |
+| D | Skip to the next drop. In a battle: sync the two decks into one drop |
+| X | Mixer: genres, the mashup, lead synth, channels and visuals |
 | F | Full screen |
 | M | Mute |
 
 The controls fade after a few seconds without mouse movement.
-
-Options: `python server.py --port 9000 --max-nodes 800 --no-browser`
 
 **Contains flashing lights** when a drop lands. Switch them off on the start screen or in the mixer.
 If your system asks for reduced motion, they start off, the camera moves far less, and the lasers and
@@ -66,6 +67,30 @@ names glitch in, and the commit message shows as *Now playing* (*Dropping* in a 
 light travels along the graph's edges and plays the lead as it lands. Each cluster's colour picks the
 note, height on screen picks the octave, and left–right is the stereo position.
 
+## Battles
+
+With two repositories, each one is a deck with its own genre, key and tempo, and its graph takes a
+corner: left and right (top and bottom on a phone), with a crackling line and **VS** between them.
+
+- **Rounds.** The decks take eight-bar rounds, each in its own genre at its own tempo: house at 125
+  against drum & bass at 176, say. The deck that's playing leans in, big and bright; the other backs
+  off and dims. A snare roll at the end of each round hands over to the other deck.
+- **Punches.** Every kick and clap throws a comet from the playing graph at the other one. It lands
+  with a flash and knocks that graph back. The meter at the top is a tug of war: it swings toward
+  whoever is landing more.
+- **Sync (press D).** From the next bar the decks trade turns, a bar each and then faster: half bars,
+  beats, then eighth notes. Their tempos glide to meet halfway and the second deck moves into the
+  first deck's key. On screen the two graphs circle in toward each other while the line between them
+  fades.
+- **One drop.** A four-bar build-up spirals the graphs together, the screen goes dark for a beat, and
+  they land as one double constellation in a sixteen-bar mashup drop: drums from one repo, bass and
+  chords from the other (choose who brings what under **Mashup** in the mixer). Lightning jumps
+  between the two graphs on every kick. After a breakdown they split up and battle on; press D again
+  in the breakdown for another drop together.
+
+Each repository's commits drop as riffs on its own deck's bars. To keep two graphs smooth, a battle
+shows the 900 most connected nodes of each.
+
 ## How the repository picks the music
 
 | From the repository | Becomes |
@@ -85,8 +110,12 @@ note, height on screen picks the octave, and left–right is the stereo position
 Press **X** or click **Mixer**. Choices are remembered in this browser.
 
 - **Genre**: from your repo, house, techno, trance, big room, or drum & bass. Switching brings the new
-  genre in with a build-up and a drop.
-- **Lead synth**: the sound the graph plays (pluck, supersaw, FM bell, 8-bit or acid).
+  genre in with a build-up and a drop. In a battle each deck has its own row, and a change is heard
+  from the next bar.
+- **Mashup** (battles only): which repo brings the drums, the bass, and the chords and arpeggio to
+  the drop they make together.
+- **Lead synth**: the sound the graph plays (pluck, supersaw, FM bell, 8-bit or acid). Left to the
+  code, each deck in a battle keeps its own.
 - **Channels**: kick, clap & snare, hi-hats, percussion, bass, chords, pad, arpeggio, the lead, and
   risers & impacts, each with an on/off switch and a volume. Bass, chords, pad and arpeggio pump
   under the kick (sidechain).

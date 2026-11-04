@@ -20,7 +20,8 @@ WEB_DIR = ROOT / "web"
 CACHE_DIR = ROOT / ".cache"
 
 MAX_COMMUNITIES = 18  # distinct colours before the smallest clusters share one
-INSTALL_HINT = "pip install graphifyy"
+VENV_BIN = ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin")
+INSTALL_HINT = f"{Path('.venv') / VENV_BIN.name / 'pip'} install graphifyy"
 
 _ANSI = re.compile(rb"\x1b\[[0-9;?]*[A-Za-z]")
 _GENERIC_COMMUNITY = re.compile(r"^community\s*\d+$", re.I)
@@ -158,12 +159,15 @@ def rmtree(path: Path) -> None:
 
 
 def graphify_command() -> list[str] | None:
-    exe = shutil.which("graphify")
-    if exe:
-        return [exe]
+    """graphify from this project's own environment if it has one, else whatever is installed."""
+    for folder in (VENV_BIN, Path(sys.executable).parent):
+        for name in ("graphify.exe", "graphify"):
+            if (folder / name).exists():
+                return [str(folder / name)]
     if importlib.util.find_spec("graphify") is not None:
         return [sys.executable, "-m", "graphify"]
-    return None
+    exe = shutil.which("graphify")
+    return [exe] if exe else None
 
 
 def summarize_graph(graph: dict, max_nodes: int, file_of: Callable[[dict], str],

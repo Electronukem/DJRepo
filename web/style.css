@@ -105,11 +105,31 @@ h1 {
 
 #repo-form {
   display: flex;
-  gap: 8px;
-  width: min(560px, 100%);
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(780px, 100%);
 }
 
-#repo-url {
+.deck-inputs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.vs-tag {
+  flex-shrink: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  background: linear-gradient(100deg, var(--hot), var(--cool));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+#repo-url, #repo-url-b {
   flex: 1;
   min-width: 0;
   padding: 15px 20px;
@@ -123,15 +143,21 @@ h1 {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-#repo-url::placeholder { color: rgba(244, 240, 255, 0.38); }
+#repo-url::placeholder, #repo-url-b::placeholder { color: rgba(244, 240, 255, 0.38); }
 
 #repo-url:focus {
   border-color: var(--hot);
   box-shadow: 0 0 0 4px rgba(255, 63, 164, 0.15), 0 0 24px rgba(255, 63, 164, 0.25);
 }
 
-#repo-form button {
-  padding: 0 26px;
+#repo-url-b:focus {
+  border-color: var(--cool);
+  box-shadow: 0 0 0 4px rgba(63, 210, 255, 0.15), 0 0 24px rgba(63, 210, 255, 0.25);
+}
+
+#go {
+  min-width: 180px;
+  padding: 14px 30px;
   border: 0;
   border-radius: 999px;
   background: linear-gradient(100deg, var(--hot), #ff7a3f);
@@ -144,8 +170,10 @@ h1 {
   transition: transform 0.15s, box-shadow 0.2s;
 }
 
-#repo-form button:hover { transform: scale(1.04); box-shadow: 0 0 34px rgba(255, 63, 164, 0.6); }
-#repo-form button:active { transform: scale(0.97); }
+#go:hover { transform: scale(1.04); box-shadow: 0 0 34px rgba(255, 63, 164, 0.6); }
+#go:active { transform: scale(0.97); }
+
+.chip.pair { border-color: rgba(63, 210, 255, 0.35); }
 
 .checks {
   display: flex;
@@ -262,6 +290,8 @@ h1 {
   font-family: var(--display);
   font-weight: 600;
   font-size: 20px;
+  line-height: 1.5;
+  white-space: pre-line;
 }
 
 #log {
@@ -319,11 +349,57 @@ body.idle .fade { opacity: 0; pointer-events: none; }
   top: 0;
   left: 0;
   right: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 8px 16px;
   padding: 20px 22px;
+}
+
+.deck-a { grid-column: 1; grid-row: 1; min-width: 0; }
+.deck-state { grid-column: 3; grid-row: 1; justify-self: end; }
+
+/* a battle: deck A on the left, deck B on the right, the fight in the middle */
+body.battle .deck-b { grid-column: 3; grid-row: 1; justify-self: end; min-width: 0; text-align: right; }
+body.battle .vs { grid-column: 2; grid-row: 1; }
+body.battle .deck-state { grid-column: 2; grid-row: 2; justify-self: center; align-items: center; text-align: center; }
+body.battle #repo-name { color: #ffc2e2; }
+body.battle #repo-name-b { color: #c2f0ff; }
+body.battle .deck-a, body.battle .deck-b { transition: opacity 0.25s; }
+body.battle[data-deck="1"] .deck-a, body.battle[data-deck="0"] .deck-b { opacity: 0.5; }
+body.battle[data-deck="0"] #repo-name { text-shadow: 0 0 18px var(--hot); }
+body.battle[data-deck="1"] #repo-name-b { text-shadow: 0 0 18px var(--cool); }
+
+.vs { padding-top: 10px; }
+
+.meter {
+  position: relative;
+  width: min(300px, 30vw);
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1b8fb5, var(--cool));
+  box-shadow: 0 0 16px rgba(63, 210, 255, 0.35);
+}
+
+#meter-a {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 50%;
+  background: linear-gradient(90deg, #b51f6f, var(--hot));
+  box-shadow: 0 0 16px var(--hot);
+  transition: width 0.25s ease-out;
+}
+
+/* in sync, the two halves become one */
+.vs.synced .meter { background: linear-gradient(90deg, var(--hot), #ffe066, var(--cool)); }
+.vs.synced #meter-a { opacity: 0; }
+
+#bpm {
+  margin: 0;
+  color: rgba(244, 240, 255, 0.6);
+  font-family: var(--mono);
+  font-size: 11px;
 }
 
 #repo-name {
@@ -403,6 +479,8 @@ body[data-section="break"] #section { color: #a9e8ff; }
   font-size: 13.5px;
   line-height: 1.6;
   z-index: 5;  /* above the caption */
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
 }
 
 .panel ul { margin: 0; padding-left: 18px; }
@@ -551,6 +629,42 @@ body[data-section="break"] #section { color: #a9e8ff; }
 
 #reset-mix { margin-top: 16px; }
 
+.deck-label {
+  margin: 10px 0 6px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.deck-label:first-of-type { margin-top: 0; }
+.deck-label.a { color: var(--hot); }
+.deck-label.b { color: var(--cool); }
+
+.mash-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.mash-row .genre-chip[data-from="1"][aria-pressed="true"] {
+  border-color: var(--cool);
+  background: rgba(63, 210, 255, 0.16);
+  box-shadow: 0 0 14px rgba(63, 210, 255, 0.25);
+}
+
+#reasons .about-head {
+  list-style: none;
+  margin: 12px 0 0 -18px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#reasons .about-head:first-child { margin-top: 0; }
+
 .with-icon {
   display: inline-flex;
   align-items: center;
@@ -595,6 +709,8 @@ body.idle #caption { bottom: 40px; }
 }
 
 body[data-section="drop"] #caption-tag { color: #ffe066; }
+body.battle #caption[data-deck="0"] #caption-tag { color: var(--hot); }
+body.battle #caption[data-deck="1"] #caption-tag { color: var(--cool); }
 
 #caption-msg {
   margin: 0 0 6px;
@@ -695,6 +811,14 @@ body[data-section="drop"] #caption-tag { color: #ffe066; }
   #caption { bottom: 78px; }
   .controls { gap: 4px; }
   #mixer-toggle svg { display: none; }
+  .deck-inputs { flex-direction: column; }
+  #repo-url, #repo-url-b { width: 100%; }
+  body.battle .hud-top { grid-template-columns: 1fr 1fr; }
+  body.battle .deck-b { grid-column: 2; }
+  body.battle .vs { grid-column: 1 / -1; grid-row: 2; justify-self: center; padding-top: 0; }
+  body.battle .deck-state { grid-column: 1 / -1; grid-row: 3; }
+  .meter { width: 60vw; }
+  .mash-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
