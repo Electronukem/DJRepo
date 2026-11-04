@@ -45,6 +45,7 @@ const CYCLE = ['groove', 'build', 'drop', 'break', 'build', 'drop'];
 // sixteenths in each bar, faster and faster, before the build-up that merges them.
 const ROUND_BARS = 8;
 const TRADE = [16, 16, 16, 16, 8, 8, 4, 2];
+const TEMPO_GAP = 0.03;  // how far apart two decks' tempos may be in a battle (about 4 BPM at 128)
 
 // level: the default volume. trim: loudness calibration so every channel at the same level
 // sits at a similar loudness. duck: how much the kick pumps it (sidechain). reverb/echo: sends.
@@ -239,7 +240,7 @@ function mashSound(a, b, parts) {
   const from = (part) => (parts[part] === 1 ? b : a);
   const drums = from('drums');
   return {
-    id: 'mix', bpm: Math.round((a.bpm + b.bpm) / 2), key: a.key, mode: a.mode, progression: a.progression,
+    id: 'mix', bpm: Math.round(((a.play ?? a.bpm) + (b.play ?? b.bpm)) / 2), key: a.key, mode: a.mode, progression: a.progression,
     swing: drums.swing, lead: null, reverb: Math.max(a.reverb, b.reverb), drums: drums.drums, kick: drums.kick,
     perc: drums.perc, snare: drums.snare, pump: Math.max(a.pump, b.pump), bass: from('bass').bass,
     chords: from('chords').chords, arp: from('chords').arp,
@@ -364,7 +365,29 @@ class DJ {
     this.replan();
   }
 
+  // In a battle the decks play close to each other's tempo, so the hand-over between rounds doesn't
+  // lurch. Further apart than TEMPO_GAP, they meet around the middle (so the drop they make together
+  // keeps its tempo) until they're that close. A song can't move, so the repo comes to it instead.
+  // Each deck keeps its own genre; `play` is the tempo it plays at.
+  matchTempos() {
+    const [a, b] = this.decks;
+    for (const d of this.decks) if (d) d.play = d.bpm;
+    if (!a || !b) return;
+    const song = this.songDeck;
+    if (song) {
+      const repo = this.decks[1 - song.id];
+      repo.play = Math.round(clamp(repo.bpm, song.bpm / (1 + TEMPO_GAP), song.bpm * (1 + TEMPO_GAP)));
+      return;
+    }
+    const [slow, fast] = a.bpm <= b.bpm ? [a, b] : [b, a];
+    if (fast.bpm <= slow.bpm * (1 + TEMPO_GAP)) return;
+    const mid = (slow.bpm + fast.bpm) / 2;
+    slow.play = Math.round((2 * mid) / (2 + TEMPO_GAP));
+    fast.play = Math.round(slow.play * (1 + TEMPO_GAP));
+  }
+
   remix() {
+    this.matchTempos();
     const [a, b] = this.decks;
     const song = this.songDeck;
     if (song && b) {
@@ -525,10 +548,11 @@ class DJ {
     let harmony = a;
     let turns = null;
     let split = 0;
-    let bpm = a.bpm;
+    const tempo = (d) => d.play ?? d.bpm;
+    let bpm = tempo(a);
     if (p.stage === 'battle' || p.stage === 'challenge') {
       harmony = this.decks[p.deck] || a;
-      bpm = harmony.bpm;
+      bpm = tempo(harmony);
     } else if (p.stage === 'sync' && p.section === 'drop') {
       // Trading: B walks to A's key over the first four bars while both tempos glide to the middle.
       // A song can't move, so against a song the repo comes to its tempo at once, and to its key.
@@ -537,7 +561,7 @@ class DJ {
       let sides;
       if (song) {
         const repo = this.decks[1 - song.id];
-        const matched = { ...repo, key: (repo.key + shift + 12) % 12, bpm: song.bpm };
+        const matched = { ...repo, key: (repo.key + shift + 12) % 12, bpm: song.bpm, play: song.bpm };
         sides = p.deck === song.id ? [song, matched] : [matched, song];
       } else {
         const moved = shift ? { ...b, key: (b.key + shift + 12) % 12 } : b;
@@ -547,7 +571,7 @@ class DJ {
       if (split >= 16) {
         harmony = sides[pb % 2];
         split = 0;
-        bpm = song ? song.bpm : harmony.bpm + (this.mash.bpm - harmony.bpm) * u;
+        bpm = song ? song.bpm : tempo(harmony) + (this.mash.bpm - tempo(harmony)) * u;
       } else {
         turns = sides;
         harmony = this.mash;
@@ -899,8 +923,10 @@ class DJ {
     if (this.offset === null || Math.abs(offset - this.offset) > 0.03) this.offset = offset;
   }
 
+  // Never before the audio clock's zero: just as a set starts, the first events can land a hair before
+  // it, and Web Audio throws on a negative time.
   toAudio(t) {
-    return t + (this.offset ?? 0);
+    return Math.max(0, t + (this.offset ?? 0));
   }
 
   ready() {

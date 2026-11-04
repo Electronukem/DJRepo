@@ -1616,8 +1616,9 @@ function renderAbout() {
   if (world.battle && song) {
     const repo = world.graphs.find((g) => g !== song);
     add('The battle', true);
-    add(`${repo.short} plays ${GENRES[repo.set.genre].name} at ${repo.set.bpm} BPM; ${song.short} answers as it is, at `
-      + `${song.set.bpm.toFixed(1)} BPM. They take eight-bar rounds, and every kick and clap throws a punch, the song's own beats included.`);
+    add(`${repo.short} plays ${GENRES[repo.set.genre].name} at ${playTempo(repo)} BPM; ${song.short} answers as it is, at `
+      + `${song.set.bpm.toFixed(1)} BPM. They take eight-bar rounds, and every kick and clap throws a punch, the song's own beats included.`
+      + (playTempo(repo) !== Math.round(repo.set.bpm) ? ` (${repo.short} would be ${Math.round(repo.set.bpm)} BPM on its own; it comes close to the song's tempo so the hand-overs don't lurch.)` : ''));
     add(`Press D to sync: they trade bars, then half bars, beats and eighths, with ${repo.short} at the song's tempo and `
       + `moving into its key. Then they drop together: ${song.short} as it is, with ${repo.short}'s drums on top and its graph on lead.`);
   } else if (world.battle) {
@@ -1625,8 +1626,10 @@ function renderAbout() {
     const mash = music.mash;
     const from = (part) => world.graphs[settings.mash[part]].short;
     add('The battle', true);
-    add(`${a.short} plays ${GENRES[a.set.genre].name} at ${a.set.bpm} BPM; ${b.short} answers with ${GENRES[b.set.genre].name} at ${b.set.bpm} BPM. `
-      + 'They take eight-bar rounds, every kick and clap throws a punch at the other graph, and the meter shows who is winning.');
+    add(`${a.short} plays ${GENRES[a.set.genre].name} at ${playTempo(a)} BPM; ${b.short} answers with ${GENRES[b.set.genre].name} at ${playTempo(b)} BPM. `
+      + 'They take eight-bar rounds, every kick and clap throws a punch at the other graph, and the meter shows who is winning.'
+      + (playTempo(a) !== Math.round(a.set.bpm) || playTempo(b) !== Math.round(b.set.bpm)
+        ? ` On their own they'd be ${Math.round(a.set.bpm)} and ${Math.round(b.set.bpm)} BPM; they meet in the middle, within a few BPM, so the hand-overs don't lurch.` : ''));
     add(`Press D to sync: they trade bars, then half bars, beats and eighths while their tempos meet at ${mash.bpm} BPM and `
       + `${b.short} moves into ${a.short}'s key. Then a build-up pulls the two graphs into one drop: drums from ${from('drums')}, `
       + `bass from ${from('bass')}, chords from ${from('chords')}. Afterwards they split up and battle on.`);
@@ -1777,9 +1780,22 @@ function setupDecks(incoming = -1) {
 }
 
 function showSets() {
-  $('#mood').textContent = world.graphs[0].set.label;
-  if (world.graphs[1]) $('#mood-b').textContent = world.graphs[1].set.label;
+  $('#mood').textContent = deckLabel(world.graphs[0]);
+  if (world.graphs[1]) $('#mood-b').textContent = deckLabel(world.graphs[1]);
   syncMixer();
+}
+
+// The tempo a deck actually plays at: in a battle the two meet, so it may not be the repo's own.
+function playTempo(g) {
+  const d = music.decks[g.index];
+  return Math.round(d && d.play ? d.play : g.set.bpm);
+}
+
+// A deck's label, with the tempo it plays at in a battle (and the repo's own, if that's different).
+function deckLabel(g) {
+  const own = Math.round(g.set.bpm);
+  const play = playTempo(g);
+  return play === own ? g.set.label : g.set.label.replace(`${own} BPM`, `${play} BPM (from ${own})`);
 }
 
 function leave() {
@@ -2193,7 +2209,7 @@ function publish() {
       battle: Boolean(world && world.battle),
       incoming: Boolean(world && world.incoming),
       decks: world ? world.graphs.map((g) => ({
-        name: g.name, short: g.short, label: g.set.label, genre: g.set.genre, lead: g.set.lead, song: Boolean(g.scene.song),
+        name: g.name, short: g.short, label: deckLabel(g), genre: g.set.genre, lead: g.set.lead, song: Boolean(g.scene.song),
         codeLead: g.set.codeLead, repoGenre: g.repoGenre, waiting: Boolean(g.waiting),
       })) : [],
       settings: {

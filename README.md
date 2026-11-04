@@ -148,8 +148,10 @@ drop. Each phrase is eight bars, and drops are sixteen.
 
 With two repos, each is a deck with its own genre, key and tempo, and its graph takes a corner.
 
-- **Rounds.** Eight bars each, in each deck's own genre and tempo: house at 125 against drum & bass at
-  176, say. The deck that's playing leans in; the other backs off and dims.
+- **Rounds.** Eight bars each, in each deck's own genre: house against drum & bass, say. Their tempos
+  meet in the middle, to within 3% of each other (house at 124 and drum & bass at 172 play 146 and
+  150), so the hand-over between rounds doesn't lurch. Against a song, the repo comes to the song's
+  tempo instead. The deck that's playing leans in; the other backs off and dims.
 - **Punches.** Every kick and clap throws a comet at the other graph and knocks it back. The meter at
   the top swings toward whoever is landing more.
 - **Sync (D).** The decks trade a bar each, then half bars, beats and eighth notes, while their tempos
