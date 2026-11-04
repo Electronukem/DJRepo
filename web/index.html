@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DJRepo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2307030f'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23ff3fa4' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%233fd2ff'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;700&family=Unbounded:wght@600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="sky" aria-hidden="true"></canvas>
+
+  <main id="intro" class="screen">
+    <h1>DJRepo</h1>
+    <p class="lede">
+      Paste a GitHub repository. graphify maps its code, your commits become the set,
+      and the whole thing builds up and drops.
+    </p>
+    <form id="repo-form" autocomplete="off">
+      <label for="repo-url" class="sr-only">GitHub repository</label>
+      <input id="repo-url" name="url" type="text" inputmode="url" placeholder="github.com/owner/repository" spellcheck="false" required>
+      <button type="submit">Drop it</button>
+    </form>
+    <div class="checks">
+      <label class="check"><input type="checkbox" id="refresh"> Fetch it fresh instead of using the saved copy</label>
+      <label class="check"><input type="checkbox" id="flashes-start"> Flashing lights</label>
+    </div>
+    <div id="recent" class="recent" hidden></div>
+    <p id="error" class="error" role="alert" hidden></p>
+    <div id="notice" class="notice" hidden></div>
+    <p class="hint">Turn it up. Once it starts: D drops, X opens the mixer, F is full screen and M is mute.</p>
+  </main>
+
+  <section id="progress" class="screen" hidden aria-live="polite">
+    <div class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <p id="step">Getting ready</p>
+    <pre id="log"></pre>
+  </section>
+
+  <div id="hud" hidden>
+    <div class="phrase" aria-hidden="true"><div id="phrase-fill"></div></div>
+    <header class="hud-top fade">
+      <div>
+        <a id="repo-name" target="_blank" rel="noopener"></a>
+        <p id="mood"></p>
+      </div>
+      <div class="deck-state">
+        <p id="section" aria-live="polite"></p>
+        <div id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <p id="countdown"></p>
+      </div>
+    </header>
+
+    <aside id="about-panel" class="panel" hidden>
+      <ul id="reasons"></ul>
+    </aside>
+
+    <aside id="mixer" class="panel mixer" hidden aria-label="Mixer">
+      <section>
+        <h2>Genre</h2>
+        <div id="genres" class="chips" role="group" aria-label="Genre"></div>
+      </section>
+      <section>
+        <h2>Lead synth <span>plays the graph</span></h2>
+        <div id="leads" class="chips" role="group" aria-label="Lead synth"></div>
+      </section>
+      <section>
+        <h2>Drums</h2>
+        <div id="drums"></div>
+      </section>
+      <section>
+        <h2>Synths <span>everything but the lead pumps with the kick</span></h2>
+        <div id="synths"></div>
+      </section>
+      <section>
+        <h2>FX</h2>
+        <div id="fx"></div>
+      </section>
+      <section>
+        <h2>Visuals</h2>
+        <label class="visual-row" for="intensity">Camera intensity
+          <input id="intensity" type="range" min="0" max="1" step="0.01">
+        </label>
+        <label class="visual-row"><span>Flashing lights</span><input id="flashes" class="switch" type="checkbox"></label>
+      </section>
+      <button id="reset-mix" class="ghost" type="button">Back to the suggested mix</button>
+    </aside>
+
+    <div id="caption" class="fading">
+      <p id="caption-tag"></p>
+      <p id="caption-msg"></p>
+      <p id="caption-meta"></p>
+    </div>
+
+    <nav class="controls fade" aria-label="Playback">
+      <button id="drop" class="drop-button" type="button" title="Skip to the next drop (D)">Drop</button>
+      <button id="sound" class="icon" type="button" aria-pressed="true" aria-label="Sound" title="Sound (M)">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/>
+          <path class="waves" d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>
+          <path class="cross" d="M16 10l4 4M20 10l-4 4"/>
+        </svg>
+      </button>
+      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume">
+      <button id="fullscreen" class="icon" type="button" aria-label="Full screen" title="Full screen (F)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+      <button id="mixer-toggle" class="ghost with-icon" type="button" aria-expanded="false" aria-controls="mixer" title="Mixer (X)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M12 4v16M18 4v16"/><path d="M4 14h4M10 8h4M16 16h4"/></svg>
+        Mixer
+      </button>
+      <button id="about" class="ghost" type="button" aria-expanded="false" aria-controls="about-panel">Why</button>
+      <button id="again" class="ghost" type="button"><span class="wide">New repo</span><span class="narrow">New</span></button>
+    </nav>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="genres.js"></script>
+  <script src="dj.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
