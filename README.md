@@ -5,6 +5,10 @@
 **Your GitHub repo, played as a live EDM set with a light show.**<br>
 Battle two repos, or your code against a song. Bring in challengers mid-set. Then let Meta's Muse Spark find you a real gig.
 
+**Voice, Speech & Audio AI** · built for the Meta Global AI Hackathon 2026<br>
+Speech in (Muse Voice Transcribe) · song listening (tempo, key, bar lines) · synthesised music and a spoken announcer out
+
+[![Category: Voice, Speech & Audio AI](https://img.shields.io/badge/category-Voice%2C%20Speech%20%26%20Audio%20AI-7a3cff)](#audio-ai-end-to-end)
 [![Built with Meta Muse Spark and Muse Voice](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark%20%C2%B7%20Muse%20Voice-0866FF)](#built-with-meta)
 [![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)](#built-with-meta)
 [![CI](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml/badge.svg)](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml)
@@ -23,6 +27,19 @@ writing cold pitches that mostly go unread. DJRepo does that research with Meta'
 the booking contact against real pages, and hands you a pitch in your own voice, with a clip of your
 set attached, in about two minutes. And it makes code something you can hear and see: your commit
 history, played as a set.
+
+## Audio AI, end to end
+
+DJRepo is an audio AI project: sound goes in and sound comes out at every step, and you can run the
+whole set by voice.
+
+| | What DJRepo does | How |
+| --- | --- | --- |
+| **Speech in** | Hold **V** and say "drop it", "bring in facebook react", "switch to techno", "turn it up" or "lights off" | Meta's **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`), push to talk, about a second per command, even from a quiet laptop mic with the music playing |
+| **Listening** | Drop in any MP3: DJRepo hears its tempo, bar lines, key and sections, draws it as a graph, and battles it | A song listener in a Web Worker: spectral-flux onsets, autocorrelation tempo, a least-squares beat grid, chroma downbeats, key profiles and section clustering. Tempo within 0.001 BPM and bar lines within 12 ms on the [benchmark](#proof-it-works) |
+| **Music out** | Every commit becomes a bar of EDM, beat-matched against the other deck and mixed live | Web Audio synthesis with no samples: every kick, chord and riser is generated |
+| **Speech out** | An announcer calls "A new contender has arrived" and "Meta is cooking" over the set | Speech synthesis, with the music ducked under it |
+| **Audio for the pitch** | A clip of your set, in the genre Muse Spark picked, to attach to a gig pitch | Rendered offline and encoded to MP3 in the browser |
 
 ## Watch it
 
