@@ -1179,6 +1179,8 @@ body[data-section="break"] #section { color: #a9e8ff; }
 
 .heard-dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: #4d94ff; }
 .heard.listening .heard-dot { background: #ff4d6d; animation: mic-pulse 0.9s ease-in-out infinite; }
+.heard.speak { border-color: rgba(80, 230, 140, 0.8); box-shadow: 0 0 26px rgba(80, 230, 140, 0.45); }
+.heard.speak .heard-dot { background: #50e68c; }
 .heard.thinking .heard-dot { animation: mic-pulse 0.5s ease-in-out infinite; }
 .heard.error { border-color: rgba(255, 159, 182, 0.5); box-shadow: none; }
 .heard.error .heard-dot { background: var(--error); }

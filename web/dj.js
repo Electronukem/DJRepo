@@ -454,14 +454,14 @@ class DJ {
     this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, t, 0.05);
   }
 
-  // Dip the whole mix under the announcer's voice, or bring it back up.
-  duck(on) {
+  // Dip the whole mix (under the announcer, or under you while you give a voice command), or bring it back up.
+  duck(on, depth = 0.35) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const g = this.voiceDuck.gain;
     g.cancelScheduledValues(t);
     g.setValueAtTime(g.value, t);
-    g.setTargetAtTime(on ? 0.35 : 1, t, on ? 0.06 : 0.4);
+    g.setTargetAtTime(on ? depth : 1, t, on ? 0.06 : 0.4);
   }
 
   // ---- the arrangement ----

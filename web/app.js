@@ -2334,11 +2334,11 @@ async function voiceDown() {
     return;
   }
   $('#voice').classList.add('on');
-  showHeard('listening', 'Opening the mic…');
+  music.duck(true, 0.12);  // way down, so your voice is what the mic hears
+  showHeard('listening', 'Opening the mic… wait for “Speak now”');
   try {
     if (!(await talkStart())) return;  // let go before the mic was open: voiceUp has tidied up
-    music.duck(true);
-    showHeard('listening', 'Listening… hold V while you speak, then let go');
+    showHeard('listening speak', 'Speak now… then let go');
     // Show it's hearing you (or isn't) while you hold, held for a moment through the gaps between words.
     let heard = 0;
     let ever = false;
@@ -2351,8 +2351,8 @@ async function voiceDown() {
       heard = Math.max(talkLevel(), heard * 0.85);
       ever = ever || heard > 0.012;
       heardBox.style.setProperty('--level', Math.min(1, heard * 8).toFixed(2));
-      $('#heard-text').textContent = ever ? 'Listening… hearing you. Let go when you’re done.'
-        : 'Listening… no sound from the mic yet';
+      $('#heard-text').textContent = ever ? 'Hearing you… let go when you’ve finished'
+        : 'Speak now… (no sound from the mic yet)';
     }, 100);
   } catch (err) {
     $('#voice').classList.remove('on');

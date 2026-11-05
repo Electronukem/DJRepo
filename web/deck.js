@@ -268,8 +268,8 @@ async function deckTalk(down) {
     if (down) {
       if (!state || !state.playing || talkHeld()) return;
       mic.classList.add('on');
-      showNotice('Opening the mic…');
-      if (await talkStart()) showNotice('Listening… hold V while you speak, then let go');
+      showNotice('Opening the mic… wait for “Speak now”');
+      if (await talkStart()) showNotice('Speak now… then let go');
     } else if (talkHeld()) {
       mic.classList.remove('on');
       showNotice('Muse Voice Transcribe is writing it down…');

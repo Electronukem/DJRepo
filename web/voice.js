@@ -9,7 +9,9 @@
 
 const VOICE_RATE = 16000;
 const SILENT_PEAK = 0.01;  // a recording quieter than this is a mic that isn't hearing anything
-const talk = { stream: null, recorder: null, chunks: [], started: 0, held: false, meter: null, meterCtx: null };
+const VOICE_LEVEL = 0.012;  // a mic level above this, while you hold, is you talking
+const TAIL_MS = 250;  // keep recording this long after you let go, so the last word isn't clipped
+const talk = { stream: null, recorder: null, chunks: [], started: 0, held: false, meter: null, meterCtx: null, loudest: 0, sampler: null };
 
 // How loud the mic is right now (0 to about 0.5 for speech), so the page can show it's hearing you.
 function talkLevel() {
@@ -51,6 +53,7 @@ function talkHeld() {
 // while the mic was still opening (then it's closed again straight away).
 async function talkStart() {
   if (talk.held) return Boolean(talk.recorder);
+  if (talk.recorder) return false;  // the last one is still finishing (its tail): this press waits its turn
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
     throw new Error("This browser can't record from a microphone.");
   }
@@ -69,6 +72,10 @@ async function talkStart() {
   talk.stream = stream;
   talk.chunks = [];
   startMeter(stream);
+  talk.loudest = 0;
+  talk.sampler = setInterval(() => {
+    talk.loudest = Math.max(talk.loudest, talkLevel());
+  }, 40);
   talk.recorder = new MediaRecorder(stream);
   talk.recorder.ondataavailable = (e) => {
     if (e.data.size) talk.chunks.push(e.data);
@@ -90,27 +97,34 @@ async function talkStop() {
   talk.held = false;
   const recorder = talk.recorder;
   const stream = talk.stream;
+  if (!recorder) return '';  // the mic never opened; talkStart closes it if it does
+  await new Promise((resolve) => setTimeout(resolve, TAIL_MS));  // the end of the last word
   talk.recorder = null;
   talk.stream = null;
+  clearInterval(talk.sampler);
+  talk.loudest = Math.max(talk.loudest, talkLevel());
   stopMeter();
-  if (!recorder) return '';  // the mic never opened; talkStart closes it if it does
   const stopped = new Promise((resolve) => {
     recorder.onstop = resolve;
   });
   recorder.stop();
   await stopped;
   closeMic(stream);
-  if (performance.now() - talk.started < 350) return '';
+  const seconds = (performance.now() - talk.started) / 1000;
+  if (seconds < 0.6) return '';
   const { wav, peak } = await toVoiceWav(new Blob(talk.chunks, { type: recorder.mimeType }));
-  if (peak < SILENT_PEAK) {
-    throw new Error('The mic recorded silence. Check which microphone the browser is using (the mic icon in the '
-      + 'address bar), and that Windows lets the browser use it (Settings → Privacy → Microphone).');
+  if (peak < SILENT_PEAK || talk.loudest < VOICE_LEVEL) {
+    throw new Error(`The mic didn't pick up your voice in that ${seconds.toFixed(1)} s. Check which microphone the browser is `
+      + 'using (the mic icon in the address bar), and that Windows lets it use the mic (Settings → Privacy → Microphone).');
   }
   const res = await fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: wav });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Muse Voice Transcribe couldn't write that down.");
   const text = String(data.text || '').trim();
-  if (!text) throw new Error("Muse Voice didn't catch any words. Try again a bit closer to the mic.");
+  if (!text) {
+    throw new Error(`Muse Voice heard sound but no words in that ${seconds.toFixed(1)} s. Wait for “Speak now”, then say the `
+      + 'command clearly, and let go after you finish.');
+  }
   return text;
 }
 
