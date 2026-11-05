@@ -15,6 +15,19 @@ def wav(seconds=0.5, rate=16000):
     return header + b"data" + struct.pack("<I", frames * 2) + b"\0\0" * frames
 
 
+@pytest.fixture(autouse=True)
+def private_log(tmp_path, monkeypatch):
+    monkeypatch.setattr(voice, "LOG", tmp_path / "voice.log")
+    return tmp_path / "voice.log"
+
+
+def test_the_log_has_numbers_about_a_recording_never_the_audio():
+    loud = wav(1.0)[:-4] + struct.pack("<hh", 16384, -16384)
+    info = voice.describe(loud)
+    assert info == {"seconds": 1.0, "rate": 16000, "peak": 0.5, "rms": 0.0056}
+    assert voice.describe(b"not a wav") == {}
+
+
 class Response(io.BytesIO):
     def __enter__(self):
         return self

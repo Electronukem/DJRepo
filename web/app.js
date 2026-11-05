@@ -1449,6 +1449,7 @@ function buildMixer() {
   const voice = $('#announcer');
   voice.checked = settings.announcer;
   voice.addEventListener('change', () => setAnnouncer(voice.checked));
+  $('#mic-pick').addEventListener('change', (e) => chooseMic(e.target.value));
   $('#reset-mix').addEventListener('click', resetMix);
 }
 
@@ -1464,6 +1465,22 @@ function setFlashes(on) {
   $('#flashes').checked = $('#flashes-start').checked = settings.flashes;
   saveSettings();
   publish();
+}
+
+// The microphones to choose from for voice commands (names appear once the page may use the mic).
+async function showMics() {
+  const pick = $('#mic-pick');
+  let mics = [];
+  try {
+    mics = await listMics();
+  } catch {
+    // no list: the default mic is still used
+  }
+  const chosen = chosenMic();
+  const options = [['', 'Default (the system’s mic)'], ...mics.filter((m) => m.id !== 'default').map((m) => [m.id, m.name])];
+  if (mics.length && mics.every((m) => /^Microphone \d+$/.test(m.name))) options.push(['', '(hold V once to see their names)']);
+  pick.replaceChildren(...options.map(([value, text]) => Object.assign(document.createElement('option'), { value, textContent: text })));
+  pick.value = options.some(([value]) => value === chosen) ? chosen : '';
 }
 
 function setAnnouncer(on) {
@@ -2462,6 +2479,7 @@ function togglePanel(which) {
     $(panel).hidden = false;
     $(button).setAttribute('aria-expanded', 'true');
     syncMixer();
+    if (which === 'mixer') showMics();
     if (which === 'add') {
       $('#add-note').textContent = addNote();
       $('#add-go').disabled = Boolean(cooking);
