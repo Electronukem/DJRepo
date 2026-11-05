@@ -11,7 +11,7 @@ if not exist ".venv\Scripts\graphify.exe" (
   ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -r requirements.txt
   if errorlevel 1 goto noinstall
 )
-".venv\Scripts\python.exe" server.py %*
+".venv\Scripts\python.exe" src\server.py %*
 if errorlevel 1 pause
 goto :eof
 

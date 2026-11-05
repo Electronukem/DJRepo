@@ -597,6 +597,18 @@ body[data-section="break"] #section { color: #a9e8ff; }
 }
 
 .visual-row .switch { justify-self: end; }
+.visual-row.mic-row { grid-template-columns: auto 1fr; }
+
+#mic-pick {
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #120c24;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
 
 .switch {
   appearance: none;

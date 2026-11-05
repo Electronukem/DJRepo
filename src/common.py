@@ -15,7 +15,7 @@ from collections import Counter, deque
 from pathlib import Path
 from typing import Callable
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # the repo: src/ holds the Python, web/ the page
 WEB_DIR = ROOT / "web"
 CACHE_DIR = ROOT / ".cache"
 

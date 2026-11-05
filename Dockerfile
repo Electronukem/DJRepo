@@ -18,4 +18,4 @@ USER dj
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8777
 VOLUME /app/.cache
-CMD ["python", "server.py", "--host", "0.0.0.0", "--no-browser"]
+CMD ["python", "src/server.py", "--host", "0.0.0.0", "--no-browser"]
