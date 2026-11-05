@@ -4,14 +4,44 @@ records and converts to the WAV the API wants (16 kHz mono 16-bit PCM); this add
 """
 from __future__ import annotations
 
+import array
 import json
+import math
 import os
+import time
 import urllib.error
 import urllib.request
 import uuid
 
-from common import BuildError
+from common import CACHE_DIR, BuildError
 from gigs import USER_AGENT, _http_problem
+
+LOG = CACHE_DIR / "voice.log"  # numbers about each recording (never the audio), for working out why one failed
+
+
+def describe(wav: bytes) -> dict:
+    """How long and how loud a 16-bit PCM WAV is, for the log."""
+    try:
+        rate = int.from_bytes(wav[24:28], "little")
+        channels = int.from_bytes(wav[22:24], "little") or 1
+        data = wav.find(b"data")
+        samples = array.array("h", wav[data + 8: data + 8 + (len(wav) - data - 8) // 2 * 2])
+        if not samples:
+            return {"seconds": 0}
+        peak = max(abs(v) for v in samples) / 32768
+        rms = math.sqrt(sum(v * v for v in samples) / len(samples)) / 32768
+        return {"seconds": round(len(samples) / channels / rate, 2), "rate": rate, "peak": round(peak, 3), "rms": round(rms, 4)}
+    except (ValueError, ZeroDivisionError):
+        return {}
+
+
+def log(entry: dict) -> None:
+    try:
+        LOG.parent.mkdir(parents=True, exist_ok=True)
+        with LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"at": time.strftime("%H:%M:%S"), **entry}) + "\n")
+    except OSError:
+        pass  # the log is only a help
 
 MODEL = "muse-voice-transcribe-1.0"
 MAX_BYTES = 4_000_000  # about two minutes at 16 kHz; push-to-talk is a few seconds
@@ -41,11 +71,18 @@ def transcribe(wav: bytes) -> str:
         "Accept": "application/json",
         "User-Agent": USER_AGENT,
     })
+    started = time.time()
     try:
         with urllib.request.urlopen(req, timeout=30) as res:
             data = json.loads(res.read())
     except urllib.error.HTTPError as exc:
-        raise BuildError(_http_problem("Muse Voice Transcribe", exc)) from exc
+        problem = _http_problem("Muse Voice Transcribe", exc)
+        log({**describe(wav), "error": problem})
+        raise BuildError(problem) from exc
     except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        log({**describe(wav), "error": str(exc)})
         raise BuildError(f"Couldn't reach Muse Voice Transcribe ({exc}).") from exc
-    return str(data.get("transcript") or "").strip()
+    text = str(data.get("transcript") or "").strip()
+    log({**describe(wav), "transcript": text, "audioDurationMs": data.get("audioDurationMs"),
+         "secondsToAnswer": round(time.time() - started, 2)})
+    return text
