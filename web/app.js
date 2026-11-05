@@ -2324,7 +2324,7 @@ function showHeard(state, text) {
   heardBox.className = `heard ${state}`;
   $('#heard-text').textContent = text;
   heardBox.hidden = false;
-  if (state === 'done' || state === 'error') heardTimer = setTimeout(() => (heardBox.hidden = true), 4500);
+  if (state === 'done' || state === 'error') heardTimer = setTimeout(() => (heardBox.hidden = true), state === 'error' ? 9000 : 4500);
 }
 
 async function voiceDown() {
@@ -2339,6 +2339,21 @@ async function voiceDown() {
     if (!(await talkStart())) return;  // let go before the mic was open: voiceUp has tidied up
     music.duck(true);
     showHeard('listening', 'Listening… hold V while you speak, then let go');
+    // Show it's hearing you (or isn't) while you hold, held for a moment through the gaps between words.
+    let heard = 0;
+    let ever = false;
+    const meter = setInterval(() => {
+      if (!talkHeld()) {
+        clearInterval(meter);
+        heardBox.style.setProperty('--level', '0');
+        return;
+      }
+      heard = Math.max(talkLevel(), heard * 0.85);
+      ever = ever || heard > 0.012;
+      heardBox.style.setProperty('--level', Math.min(1, heard * 8).toFixed(2));
+      $('#heard-text').textContent = ever ? 'Listening… hearing you. Let go when you’re done.'
+        : 'Listening… no sound from the mic yet';
+    }, 100);
   } catch (err) {
     $('#voice').classList.remove('on');
     music.duck(false);
