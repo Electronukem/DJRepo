@@ -217,6 +217,21 @@ The voice is the browser's own speech (Edge's "Natural" voices sound best). Swit
 
 ## Proof it works
 
+**At a glance** (details below):
+
+| What | Measured |
+| --- | --- |
+| Song tempo accuracy | 5 of 5 benchmark tracks within 0.001 BPM (100%) |
+| Bar-line accuracy | within 12 ms on every benchmark track |
+| Key detection | 3 of 5 exact (60%); 5 of 5 exact or the relative key (100%) |
+| Song analysis time | about 0.5 s per song in the browser, about 1 s in Node |
+| Voice command transcription (Muse Voice) | 4 of 4 spoken test commands correct (100%), 0.7–1.1 s each |
+| Pitch draft time (Muse Spark) | 177 s before tuning `reasoning_effort`, 122 s after (31% faster) |
+| Template phrases in final drafts | 0, in every live run checked |
+| Live music while building a repo or rendering a clip | worst scheduler delay 41–114 ms, inside its 250 ms lookahead: no dropouts |
+| Automated tests | 42 passing, plus the listener benchmark, in CI on every push |
+
+
 **The song listener**, benchmarked on tracks where the answer is known, each with a trap real songs
 set: a dotted-eighth echo that looks like a faster tempo, two-step drum & bass that looks like half
 time, and silence before the first beat. It runs in CI on every push
@@ -254,6 +269,20 @@ a test microphone said "drop it" and the set built up into a drop.
 `reasoning_effort` and 122 s after. On fabric, the research found the club's real demo policy
 ("email a 30 minute long demo mix along with some biographical information"), and no template
 phrases made it into the final drafts.
+
+## What it costs to run
+
+The set, the light show, songs and the live demo cost nothing: everything musical runs in your
+browser, and the Ticketmaster Discovery API is free (5,000 calls a day). Only the two Meta models are
+billed, pay-as-you-go through the [Meta Model API](https://dev.meta.ai/docs/pricing-rate-limits):
+
+| Model | Meta's price | Per use in DJRepo |
+| --- | --- | --- |
+| Muse Spark (`muse-spark-1.3`) | $1.25 per 1M input tokens, $4.25 per 1M output tokens, plus $2.50 per 1,000 web searches | One pitch is three calls (research, facts, writing), four if the writing needs a second pass. We estimate a few cents per pitch, depending on how much the research reads (we haven't metered tokens per pitch). |
+| Muse Voice Transcribe (`muse-voice-transcribe-1.0`) | $0.18 per hour of audio | A 3-second command costs about $0.00015, so 1,000 commands cost about 15 cents. |
+
+Each pitch is only made when you pick a gig, and repeated picks reuse the draft, so nothing is spent
+in the background.
 
 ## Controls
 
