@@ -1,0 +1,677 @@
+{
+ "model": "muse-voice-transcribe-1.0",
+ "ran": "2026-11-04",
+ "summary": {
+  "clean": {
+   "right": 24,
+   "of": 24,
+   "accuracy": 1.0,
+   "median_s": 0.82,
+   "p95_s": 0.93
+  },
+  "quiet": {
+   "right": 24,
+   "of": 24,
+   "accuracy": 1.0,
+   "median_s": 0.83,
+   "p95_s": 0.96
+  },
+  "music": {
+   "right": 23,
+   "of": 24,
+   "accuracy": 0.958,
+   "median_s": 0.86,
+   "p95_s": 1.0
+  }
+ },
+ "rows": [
+  {
+   "condition": "clean",
+   "clip": "drop-david.wav",
+   "said": "Drop it!",
+   "heard": "drop it.",
+   "does": "drop",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "clean",
+   "clip": "drop-zira.wav",
+   "said": "Drop it!",
+   "heard": "drop it",
+   "does": "drop",
+   "right": true,
+   "seconds": 0.67
+  },
+  {
+   "condition": "clean",
+   "clip": "react-david.wav",
+   "said": "Bring in facebook react",
+   "heard": "Bring in Facebook React",
+   "does": "bring facebook/react",
+   "right": true,
+   "seconds": 0.79
+  },
+  {
+   "condition": "clean",
+   "clip": "react-zira.wav",
+   "said": "Bring in facebook react",
+   "heard": "bring in Facebook React",
+   "does": "bring facebook/react",
+   "right": true,
+   "seconds": 0.94
+  },
+  {
+   "condition": "clean",
+   "clip": "linux-david.wav",
+   "said": "Bring in torvalds linux",
+   "heard": "Bring in Torvalds Linux.",
+   "does": "bring torvalds/linux",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "clean",
+   "clip": "linux-zira.wav",
+   "said": "Bring in torvalds linux",
+   "heard": "Bring in Torvalds Linux",
+   "does": "bring torvalds/linux",
+   "right": true,
+   "seconds": 0.83
+  },
+  {
+   "condition": "clean",
+   "clip": "techno-david.wav",
+   "said": "Switch to techno",
+   "heard": "switch to techno.",
+   "does": "genre techno",
+   "right": true,
+   "seconds": 0.88
+  },
+  {
+   "condition": "clean",
+   "clip": "techno-zira.wav",
+   "said": "Switch to techno",
+   "heard": "switch to techno.",
+   "does": "genre techno",
+   "right": true,
+   "seconds": 0.91
+  },
+  {
+   "condition": "clean",
+   "clip": "dnb-david.wav",
+   "said": "Drum and bass",
+   "heard": "drum and bass",
+   "does": "genre dnb",
+   "right": true,
+   "seconds": 0.89
+  },
+  {
+   "condition": "clean",
+   "clip": "dnb-zira.wav",
+   "said": "Drum and bass",
+   "heard": "drum and bass",
+   "does": "genre dnb",
+   "right": true,
+   "seconds": 0.9
+  },
+  {
+   "condition": "clean",
+   "clip": "trance-david.wav",
+   "said": "Play some trance",
+   "heard": "play some trance.",
+   "does": "genre trance",
+   "right": true,
+   "seconds": 0.77
+  },
+  {
+   "condition": "clean",
+   "clip": "trance-zira.wav",
+   "said": "Play some trance",
+   "heard": "play some trance.",
+   "does": "genre trance",
+   "right": true,
+   "seconds": 0.93
+  },
+  {
+   "condition": "clean",
+   "clip": "louder-david.wav",
+   "said": "Turn it up",
+   "heard": "Turn it up.",
+   "does": "louder",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "clean",
+   "clip": "louder-zira.wav",
+   "said": "Turn it up",
+   "heard": "turn it up",
+   "does": "louder",
+   "right": true,
+   "seconds": 0.76
+  },
+  {
+   "condition": "clean",
+   "clip": "quieter-david.wav",
+   "said": "Turn it down",
+   "heard": "turn it down",
+   "does": "quieter",
+   "right": true,
+   "seconds": 0.81
+  },
+  {
+   "condition": "clean",
+   "clip": "quieter-zira.wav",
+   "said": "Turn it down",
+   "heard": "turn it down.",
+   "does": "quieter",
+   "right": true,
+   "seconds": 0.8
+  },
+  {
+   "condition": "clean",
+   "clip": "mute-david.wav",
+   "said": "Mute it",
+   "heard": "mute it,",
+   "does": "mute",
+   "right": true,
+   "seconds": 0.85
+  },
+  {
+   "condition": "clean",
+   "clip": "mute-zira.wav",
+   "said": "Mute it",
+   "heard": "mute",
+   "does": "mute",
+   "right": true,
+   "seconds": 0.73
+  },
+  {
+   "condition": "clean",
+   "clip": "back-david.wav",
+   "said": "Bring it back",
+   "heard": "bring it back",
+   "does": "unmute",
+   "right": true,
+   "seconds": 0.79
+  },
+  {
+   "condition": "clean",
+   "clip": "back-zira.wav",
+   "said": "Bring it back",
+   "heard": "bring it back",
+   "does": "unmute",
+   "right": true,
+   "seconds": 0.85
+  },
+  {
+   "condition": "clean",
+   "clip": "lights-david.wav",
+   "said": "Lights off",
+   "heard": "lights off",
+   "does": "lights off",
+   "right": true,
+   "seconds": 0.78
+  },
+  {
+   "condition": "clean",
+   "clip": "lights-zira.wav",
+   "said": "Lights off",
+   "heard": "lights off",
+   "does": "lights off",
+   "right": true,
+   "seconds": 0.74
+  },
+  {
+   "condition": "clean",
+   "clip": "lead-david.wav",
+   "said": "Supersaw lead",
+   "heard": "Supersolid.",
+   "does": "lead supersaw",
+   "right": true,
+   "seconds": 0.75
+  },
+  {
+   "condition": "clean",
+   "clip": "lead-zira.wav",
+   "said": "Supersaw lead",
+   "heard": "Super solid.",
+   "does": "lead supersaw",
+   "right": true,
+   "seconds": 0.71
+  },
+  {
+   "condition": "quiet",
+   "clip": "drop-david.wav",
+   "said": "Drop it!",
+   "heard": "drop it.",
+   "does": "drop",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "quiet",
+   "clip": "drop-zira.wav",
+   "said": "Drop it!",
+   "heard": "drop it",
+   "does": "drop",
+   "right": true,
+   "seconds": 0.79
+  },
+  {
+   "condition": "quiet",
+   "clip": "react-david.wav",
+   "said": "Bring in facebook react",
+   "heard": "bring in Facebook React",
+   "does": "bring facebook/react",
+   "right": true,
+   "seconds": 0.96
+  },
+  {
+   "condition": "quiet",
+   "clip": "react-zira.wav",
+   "said": "Bring in facebook react",
+   "heard": "bring in Facebook Facebook React",
+   "does": "bring facebook/react",
+   "right": true,
+   "seconds": 1.05
+  },
+  {
+   "condition": "quiet",
+   "clip": "linux-david.wav",
+   "said": "Bring in torvalds linux",
+   "heard": "bring in Torvalds Linux.",
+   "does": "bring torvalds/linux",
+   "right": true,
+   "seconds": 0.82
+  },
+  {
+   "condition": "quiet",
+   "clip": "linux-zira.wav",
+   "said": "Bring in torvalds linux",
+   "heard": "bring in Torvalds Linux.",
+   "does": "bring torvalds/linux",
+   "right": true,
+   "seconds": 0.94
+  },
+  {
+   "condition": "quiet",
+   "clip": "techno-david.wav",
+   "said": "Switch to techno",
+   "heard": "switch to techno techno",
+   "does": "genre techno",
+   "right": true,
+   "seconds": 0.81
+  },
+  {
+   "condition": "quiet",
+   "clip": "techno-zira.wav",
+   "said": "Switch to techno",
+   "heard": "switch to techno",
+   "does": "genre techno",
+   "right": true,
+   "seconds": 0.78
+  },
+  {
+   "condition": "quiet",
+   "clip": "dnb-david.wav",
+   "said": "Drum and bass",
+   "heard": "drum and bass bass",
+   "does": "genre dnb",
+   "right": true,
+   "seconds": 0.87
+  },
+  {
+   "condition": "quiet",
+   "clip": "dnb-zira.wav",
+   "said": "Drum and bass",
+   "heard": "drum and bass",
+   "does": "genre dnb",
+   "right": true,
+   "seconds": 0.85
+  },
+  {
+   "condition": "quiet",
+   "clip": "trance-david.wav",
+   "said": "Play some trance",
+   "heard": "play some trance.",
+   "does": "genre trance",
+   "right": true,
+   "seconds": 0.9
+  },
+  {
+   "condition": "quiet",
+   "clip": "trance-zira.wav",
+   "said": "Play some trance",
+   "heard": "play some trance, trance,",
+   "does": "genre trance",
+   "right": true,
+   "seconds": 0.94
+  },
+  {
+   "condition": "quiet",
+   "clip": "louder-david.wav",
+   "said": "Turn it up",
+   "heard": "turn it up.",
+   "does": "louder",
+   "right": true,
+   "seconds": 0.84
+  },
+  {
+   "condition": "quiet",
+   "clip": "louder-zira.wav",
+   "said": "Turn it up",
+   "heard": "turn it up",
+   "does": "louder",
+   "right": true,
+   "seconds": 0.8
+  },
+  {
+   "condition": "quiet",
+   "clip": "quieter-david.wav",
+   "said": "Turn it down",
+   "heard": "turn it down",
+   "does": "quieter",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "quiet",
+   "clip": "quieter-zira.wav",
+   "said": "Turn it down",
+   "heard": "turn it down.",
+   "does": "quieter",
+   "right": true,
+   "seconds": 0.76
+  },
+  {
+   "condition": "quiet",
+   "clip": "mute-david.wav",
+   "said": "Mute it",
+   "heard": "mute",
+   "does": "mute",
+   "right": true,
+   "seconds": 0.75
+  },
+  {
+   "condition": "quiet",
+   "clip": "mute-zira.wav",
+   "said": "Mute it",
+   "heard": "mute it.",
+   "does": "mute",
+   "right": true,
+   "seconds": 0.71
+  },
+  {
+   "condition": "quiet",
+   "clip": "back-david.wav",
+   "said": "Bring it back",
+   "heard": "Bring it back.",
+   "does": "unmute",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "quiet",
+   "clip": "back-zira.wav",
+   "said": "Bring it back",
+   "heard": "bring it back",
+   "does": "unmute",
+   "right": true,
+   "seconds": 0.77
+  },
+  {
+   "condition": "quiet",
+   "clip": "lights-david.wav",
+   "said": "Lights off",
+   "heard": "lights off.",
+   "does": "lights off",
+   "right": true,
+   "seconds": 0.7
+  },
+  {
+   "condition": "quiet",
+   "clip": "lights-zira.wav",
+   "said": "Lights off",
+   "heard": "lights off",
+   "does": "lights off",
+   "right": true,
+   "seconds": 0.87
+  },
+  {
+   "condition": "quiet",
+   "clip": "lead-david.wav",
+   "said": "Supersaw lead",
+   "heard": "supersolid",
+   "does": "lead supersaw",
+   "right": true,
+   "seconds": 0.82
+  },
+  {
+   "condition": "quiet",
+   "clip": "lead-zira.wav",
+   "said": "Supersaw lead",
+   "heard": "super solid.",
+   "does": "lead supersaw",
+   "right": true,
+   "seconds": 0.72
+  },
+  {
+   "condition": "music",
+   "clip": "drop-david.wav",
+   "said": "Drop it!",
+   "heard": "drop it.",
+   "does": "drop",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "music",
+   "clip": "drop-zira.wav",
+   "said": "Drop it!",
+   "heard": "drop it,",
+   "does": "drop",
+   "right": true,
+   "seconds": 0.64
+  },
+  {
+   "condition": "music",
+   "clip": "react-david.wav",
+   "said": "Bring in facebook react",
+   "heard": "bring in Facebook Facebook React",
+   "does": "bring facebook/react",
+   "right": true,
+   "seconds": 0.93
+  },
+  {
+   "condition": "music",
+   "clip": "react-zira.wav",
+   "said": "Bring in facebook react",
+   "heard": "Bring in Facebook React.",
+   "does": "bring facebook/react",
+   "right": true,
+   "seconds": 1.0
+  },
+  {
+   "condition": "music",
+   "clip": "linux-david.wav",
+   "said": "Bring in torvalds linux",
+   "heard": "bring in Turvald Linux,",
+   "does": "bring turvald/linux",
+   "right": false,
+   "seconds": 0.95
+  },
+  {
+   "condition": "music",
+   "clip": "linux-zira.wav",
+   "said": "Bring in torvalds linux",
+   "heard": "bring in Torvalds Linux.",
+   "does": "bring torvalds/linux",
+   "right": true,
+   "seconds": 0.85
+  },
+  {
+   "condition": "music",
+   "clip": "techno-david.wav",
+   "said": "Switch to techno",
+   "heard": "switch to techno",
+   "does": "genre techno",
+   "right": true,
+   "seconds": 0.9
+  },
+  {
+   "condition": "music",
+   "clip": "techno-zira.wav",
+   "said": "Switch to techno",
+   "heard": "switch to techno techno.",
+   "does": "genre techno",
+   "right": true,
+   "seconds": 1.05
+  },
+  {
+   "condition": "music",
+   "clip": "dnb-david.wav",
+   "said": "Drum and bass",
+   "heard": "drum and bass.",
+   "does": "genre dnb",
+   "right": true,
+   "seconds": 0.72
+  },
+  {
+   "condition": "music",
+   "clip": "dnb-zira.wav",
+   "said": "Drum and bass",
+   "heard": "drum and bass",
+   "does": "genre dnb",
+   "right": true,
+   "seconds": 0.84
+  },
+  {
+   "condition": "music",
+   "clip": "trance-david.wav",
+   "said": "Play some trance",
+   "heard": "play some trance.",
+   "does": "genre trance",
+   "right": true,
+   "seconds": 0.9
+  },
+  {
+   "condition": "music",
+   "clip": "trance-zira.wav",
+   "said": "Play some trance",
+   "heard": "play some trance,",
+   "does": "genre trance",
+   "right": true,
+   "seconds": 0.89
+  },
+  {
+   "condition": "music",
+   "clip": "louder-david.wav",
+   "said": "Turn it up",
+   "heard": "Turn it up. up.",
+   "does": "louder",
+   "right": true,
+   "seconds": 0.85
+  },
+  {
+   "condition": "music",
+   "clip": "louder-zira.wav",
+   "said": "Turn it up",
+   "heard": "turn it up.",
+   "does": "louder",
+   "right": true,
+   "seconds": 0.66
+  },
+  {
+   "condition": "music",
+   "clip": "quieter-david.wav",
+   "said": "Turn it down",
+   "heard": "turn it down.",
+   "does": "quieter",
+   "right": true,
+   "seconds": 0.75
+  },
+  {
+   "condition": "music",
+   "clip": "quieter-zira.wav",
+   "said": "Turn it down",
+   "heard": "turn it down,",
+   "does": "quieter",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "music",
+   "clip": "mute-david.wav",
+   "said": "Mute it",
+   "heard": "mute.",
+   "does": "mute",
+   "right": true,
+   "seconds": 0.67
+  },
+  {
+   "condition": "music",
+   "clip": "mute-zira.wav",
+   "said": "Mute it",
+   "heard": "mute it.",
+   "does": "mute",
+   "right": true,
+   "seconds": 0.88
+  },
+  {
+   "condition": "music",
+   "clip": "back-david.wav",
+   "said": "Bring it back",
+   "heard": "bring it back.",
+   "does": "unmute",
+   "right": true,
+   "seconds": 0.88
+  },
+  {
+   "condition": "music",
+   "clip": "back-zira.wav",
+   "said": "Bring it back",
+   "heard": "bring it back. back.",
+   "does": "unmute",
+   "right": true,
+   "seconds": 0.86
+  },
+  {
+   "condition": "music",
+   "clip": "lights-david.wav",
+   "said": "Lights off",
+   "heard": "lights off",
+   "does": "lights off",
+   "right": true,
+   "seconds": 0.75
+  },
+  {
+   "condition": "music",
+   "clip": "lights-zira.wav",
+   "said": "Lights off",
+   "heard": "lights off.",
+   "does": "lights off",
+   "right": true,
+   "seconds": 0.67
+  },
+  {
+   "condition": "music",
+   "clip": "lead-david.wav",
+   "said": "Supersaw lead",
+   "heard": "Supersolid.",
+   "does": "lead supersaw",
+   "right": true,
+   "seconds": 0.79
+  },
+  {
+   "condition": "music",
+   "clip": "lead-zira.wav",
+   "said": "Supersaw lead",
+   "heard": "super solid. solid.",
+   "does": "lead supersaw",
+   "right": true,
+   "seconds": 0.89
+  }
+ ]
+}

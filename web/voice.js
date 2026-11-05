@@ -8,10 +8,54 @@
 'use strict';
 
 const VOICE_RATE = 16000;
-const SILENT_PEAK = 0.01;  // a recording quieter than this is a mic that isn't hearing anything
-const VOICE_LEVEL = 0.012;  // a mic level above this, while you hold, is you talking
+const SILENT_PEAK = 0.002;  // a recording quieter than this is a mic that isn't hearing anything at all
+const QUIET_PEAK = 0.03;  // below this, a recording with no words is most likely the wrong (or a muted) mic
+const LOUDEST = 0.7;  // quiet recordings are turned up to this peak before Muse Voice hears them...
+const MAX_GAIN = 30;  // ...by at most this much, so room hiss doesn't become a roar
 const TAIL_MS = 250;  // keep recording this long after you let go, so the last word isn't clipped
-const talk = { stream: null, recorder: null, chunks: [], started: 0, held: false, meter: null, meterCtx: null, loudest: 0, sampler: null };
+const MIC_KEY = 'djrepo.mic';  // which microphone to use, remembered in this browser
+const talk = { stream: null, recorder: null, chunks: [], started: 0, held: false, meter: null, meterCtx: null, label: '' };
+
+function chosenMic() {
+  try {
+    return localStorage.getItem(MIC_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function chooseMic(deviceId) {
+  try {
+    if (deviceId) localStorage.setItem(MIC_KEY, deviceId);
+    else localStorage.removeItem(MIC_KEY);
+  } catch {
+    // only a convenience
+  }
+}
+
+// The microphones on this computer: [{ id, name }]. Names only show once the page may use the mic.
+async function listMics() {
+  if (!navigator.mediaDevices?.enumerateDevices) return [];
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices.filter((d) => d.kind === 'audioinput' && d.deviceId !== 'communications')
+    .map((d, i) => ({ id: d.deviceId, name: d.label || `Microphone ${i + 1}` }));
+}
+
+async function openMic() {
+  // No echo cancellation or noise suppression: with the music playing, they take quiet speech for
+  // echo or noise and leave Muse Voice nothing (tested: a quiet "drop it" came back as no words with
+  // them on, and word for word with them off). Muse Voice copes with the ducked music underneath.
+  const processing = { echoCancellation: false, noiseSuppression: false, autoGainControl: true };
+  const id = chosenMic();
+  if (id) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: { ...processing, deviceId: { exact: id } } });
+    } catch {
+      chooseMic('');  // that mic has gone (unplugged): fall back to the default one
+    }
+  }
+  return navigator.mediaDevices.getUserMedia({ audio: processing });
+}
 
 // How loud the mic is right now (0 to about 0.5 for speech), so the page can show it's hearing you.
 function talkLevel() {
@@ -60,7 +104,7 @@ async function talkStart() {
   talk.held = true;
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    stream = await openMic();
   } catch {
     talk.held = false;
     throw new Error('Allow the microphone for this page to use voice commands.');
@@ -70,12 +114,9 @@ async function talkStart() {
     return false;
   }
   talk.stream = stream;
+  talk.label = stream.getAudioTracks()[0]?.label || 'the microphone';
   talk.chunks = [];
   startMeter(stream);
-  talk.loudest = 0;
-  talk.sampler = setInterval(() => {
-    talk.loudest = Math.max(talk.loudest, talkLevel());
-  }, 40);
   talk.recorder = new MediaRecorder(stream);
   talk.recorder.ondataavailable = (e) => {
     if (e.data.size) talk.chunks.push(e.data);
@@ -101,8 +142,6 @@ async function talkStop() {
   await new Promise((resolve) => setTimeout(resolve, TAIL_MS));  // the end of the last word
   talk.recorder = null;
   talk.stream = null;
-  clearInterval(talk.sampler);
-  talk.loudest = Math.max(talk.loudest, talkLevel());
   stopMeter();
   const stopped = new Promise((resolve) => {
     recorder.onstop = resolve;
@@ -113,14 +152,15 @@ async function talkStop() {
   const seconds = (performance.now() - talk.started) / 1000;
   if (seconds < 0.6) return '';
   const { wav, peak } = await toVoiceWav(new Blob(talk.chunks, { type: recorder.mimeType }));
-  if (peak < SILENT_PEAK || talk.loudest < VOICE_LEVEL) {
-    throw new Error(`The mic didn't pick up your voice in that ${seconds.toFixed(1)} s. Check which microphone the browser is `
-      + 'using (the mic icon in the address bar), and that Windows lets it use the mic (Settings → Privacy → Microphone).');
-  }
+  const wrongMic = () => new Error(`“${talk.label}” didn't pick up your voice in that ${seconds.toFixed(1)} s (the loudest `
+    + `it got was ${percent(peak)} of full volume). Pick the mic you're speaking into under Voice in the mixer (X), and `
+    + 'check it isn\'t muted.');
+  if (peak < SILENT_PEAK) throw wrongMic();
   const res = await fetch('/api/voice', { method: 'POST', headers: { 'Content-Type': 'audio/wav' }, body: wav });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Muse Voice Transcribe couldn't write that down.");
   const text = String(data.text || '').trim();
+  if (!text && peak < QUIET_PEAK) throw wrongMic();
   if (!text) {
     throw new Error(`Muse Voice heard sound but no words in that ${seconds.toFixed(1)} s. Wait for “Speak now”, then say the `
       + 'command clearly, and let go after you finish.');
@@ -128,11 +168,25 @@ async function talkStop() {
   return text;
 }
 
-// Whatever the browser recorded, as 16 kHz mono 16-bit PCM WAV, and how loud it got.
+function percent(level) {
+  return level < 0.01 ? `${(level * 100).toFixed(1)}%` : `${Math.round(level * 100)}%`;
+}
+
+// Whatever the browser recorded, as 16 kHz mono 16-bit PCM WAV (turned up if it came in quiet),
+// and how loud it was as recorded.
 async function toVoiceWav(blob) {
   const audio = await new OfflineAudioContext(1, VOICE_RATE, VOICE_RATE).decodeAudioData(await blob.arrayBuffer());
   const channels = Array.from({ length: audio.numberOfChannels }, (_, c) => audio.getChannelData(c));
   const frames = audio.length;
+  const mono = new Float32Array(frames);
+  let peak = 0;
+  for (let i = 0; i < frames; i++) {
+    let v = 0;
+    for (const ch of channels) v += ch[i];
+    mono[i] = v / channels.length;
+    peak = Math.max(peak, Math.abs(mono[i]));
+  }
+  const gain = peak > 0 ? Math.max(1, Math.min(MAX_GAIN, LOUDEST / peak)) : 1;
   const view = new DataView(new ArrayBuffer(44 + frames * 2));
   const text = (offset, s) => {
     for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i));
@@ -150,12 +204,8 @@ async function toVoiceWav(blob) {
   view.setUint16(34, 16, true);
   text(36, 'data');
   view.setUint32(40, frames * 2, true);
-  let peak = 0;
   for (let i = 0; i < frames; i++) {
-    let v = 0;
-    for (const ch of channels) v += ch[i];
-    v = Math.max(-1, Math.min(1, v / channels.length));
-    peak = Math.max(peak, Math.abs(v));
+    const v = Math.max(-1, Math.min(1, mono[i] * gain));
     view.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
   }
   return { wav: new Blob([view], { type: 'audio/wav' }), peak };

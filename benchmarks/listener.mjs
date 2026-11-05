@@ -3,7 +3,7 @@
 // with the traps real songs set: a dotted-eighth echo that looks like a faster tempo, two-step drum
 // & bass that looks like half time, and silence before the first beat. Runs in plain Node (CI too):
 //
-//   node tests/listener-benchmark.mjs
+//   node benchmarks/listener.mjs
 //
 // Exits non-zero if any track's tempo is off by more than 0.05 BPM or its bar line by more than 25 ms.
 
