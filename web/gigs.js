@@ -21,6 +21,7 @@ const gig = {
   selected: null,
   drafts: new Map(),   // event id -> { state: 'working' | 'ready' | 'error', step, result, error }
   samples: new Map(),  // genre -> Promise of { blob, url, seconds }
+  covers: new Map(),   // genre -> Promise of the clip's cover art (a Blob), or null without one
   map: null,
   layer: null,
   pins: new Map(),     // venue id -> marker
@@ -61,6 +62,7 @@ function enterGigs(scene) {
   const same = gig.scene && gig.scene.repo.url === scene.repo.url;
   if (!same) {  // drafts and clips belong to the repo they were made from
     gig.samples.clear();
+    gig.covers.clear();
     gig.drafts.clear();
     gig.selected = null;
     renderGig();
@@ -341,6 +343,18 @@ function showDraft(e, r) {
     player.dataset.key = '';
     $('#clip-note').textContent = `Making the clip. ${note}`;
   }
+  const art = $('#clip-cover');
+  if (art.dataset.key !== key) {
+    art.hidden = true;
+    art.dataset.key = '';
+  }
+  cover(r.genre).then((blob) => {
+    if (!blob || gig.selected !== e || art.dataset.key === key) return;
+    if (art.src.startsWith('blob:')) URL.revokeObjectURL(art.src);
+    art.src = URL.createObjectURL(blob);
+    art.dataset.key = key;
+    art.hidden = false;
+  });
   sample(r.genre).then((s) => {
     if (gig.selected !== e || player.dataset.key === key) return;
     player.src = s.url;
@@ -374,18 +388,37 @@ function sample(genre) {
   return gig.samples.get(genre);
 }
 
-// Save the clip, named for the DJ and the gig, so it's ready to attach.
+// The clip's cover art, painted by Meta's Muse Image on the server (one per repo and genre, cached
+// there). Resolves to null if there's no key or it couldn't be painted: the clip goes out without it.
+function cover(genre) {
+  if (!gig.covers.has(genre)) {
+    const request = fetch('/api/cover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo: gig.clips[genre].repo, genre }),
+    }).then((res) => (res.ok ? res.blob() : null)).catch(() => null);
+    gig.covers.set(genre, request);
+  }
+  return gig.covers.get(genre);
+}
+
+// Save the clip, named for the DJ and the gig, so it's ready to attach. An MP3 carries its title,
+// the DJ's name and the cover art in its tag.
 async function saveClip() {
   const e = gig.selected;
   const r = e && gig.drafts.get(e.id)?.result;
   if (!r) return;
   const s = await sample(r.genre);
   const me = profile();
-  const name = `${me.djName || me.name} - ${GENRES[r.genre].name} clip for ${e.venue.name}.${s.ext}`.replace(/[\\/:*?"<>|]+/g, '');
-  const a = Object.assign(document.createElement('a'), { href: s.url, download: name });
+  const title = `${GENRES[r.genre].name} clip for ${e.venue.name}`;
+  const name = `${me.djName || me.name} - ${title}.${s.ext}`.replace(/[\\/:*?"<>|]+/g, '');
+  const blob = s.ext === 'mp3' ? await tagMp3(s.blob, { title, artist: me.djName || me.name, cover: await cover(r.genre) }) : s.blob;
+  const url = blob === s.blob ? s.url : URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
   document.body.append(a);
   a.click();
   a.remove();
+  if (url !== s.url) setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 // ---------------------------------------------------------------------------

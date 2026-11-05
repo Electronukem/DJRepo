@@ -82,6 +82,53 @@ async function renderSample(scene, genre) {
   }
 }
 
+// The MP3 with an ID3v2.3 tag in front: the title, the DJ, and the cover (as a 600 px JPEG, which
+// every player shows), so the clip looks like a mix when the promoter opens it.
+async function tagMp3(mp3, { title, artist, cover }) {
+  const frame = (id, body) => {
+    const head = new Uint8Array(10);
+    head.set([...id].map((c) => c.charCodeAt(0)));
+    new DataView(head.buffer).setUint32(4, body.length);
+    return [head, body];
+  };
+  const text = (s) => {  // UTF-16 with a byte-order mark, so any name survives
+    const out = new Uint8Array(3 + s.length * 2);
+    out.set([1, 0xff, 0xfe]);
+    const view = new DataView(out.buffer);
+    for (let i = 0; i < s.length; i++) view.setUint16(3 + i * 2, s.charCodeAt(i), true);
+    return out;
+  };
+  const frames = [];
+  if (title) frames.push(...frame('TIT2', text(title)));
+  if (artist) frames.push(...frame('TPE1', text(artist)));
+  const jpeg = cover ? await toJpeg(cover, 600).catch(() => null) : null;
+  if (jpeg) {
+    // No text encoding, the type, picture type 3 (front cover), an empty description, the picture.
+    const head = new TextEncoder().encode('\0image/jpeg\0\x03\0');
+    const body = new Uint8Array(head.length + jpeg.length);
+    body.set(head);
+    body.set(jpeg, head.length);
+    frames.push(...frame('APIC', body));
+  }
+  if (!frames.length) return mp3;
+  const size = frames.reduce((n, part) => n + part.length, 0);
+  const header = Uint8Array.of(0x49, 0x44, 0x33, 3, 0, 0, 0, 0, 0, 0);  // "ID3", v2.3, no flags
+  for (let i = 0; i < 4; i++) header[6 + i] = (size >> (7 * (3 - i))) & 0x7f;  // the size, seven bits a byte
+  return new Blob([header, ...frames, mp3], { type: 'audio/mpeg' });
+}
+
+// The middle square of an image, as JPEG bytes.
+async function toJpeg(blob, size) {
+  const bitmap = await createImageBitmap(blob);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = Object.assign(document.createElement('canvas'), { width: size, height: size });
+  canvas.getContext('2d').drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  bitmap.close();
+  const jpeg = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+  if (!jpeg) throw new Error('no JPEG');
+  return new Uint8Array(await jpeg.arrayBuffer());
+}
+
 function loadLame() {
   if (window.lamejs) return Promise.resolve();
   return new Promise((resolve, reject) => {

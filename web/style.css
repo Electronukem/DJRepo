@@ -1125,6 +1125,8 @@ body[data-section="break"] #section { color: #a9e8ff; }
 .clip-genre, .clip-note { margin: 0; font-size: 12.5px; }
 .clip-note { color: var(--muted); font-family: var(--mono); font-size: 11px; }
 #clip-player { width: 100%; height: 36px; margin: 8px 0 4px; }
+.clip-cover { display: block; width: 132px; aspect-ratio: 1; margin-top: 8px; border-radius: 8px; object-fit: cover; }
+.clip-cover[hidden] { display: none; }
 
 .send-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 .send-row a { text-decoration: none; }
