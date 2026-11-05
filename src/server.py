@@ -22,6 +22,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import cover
 import gigs
 import voice
 from common import CACHE_DIR, INSTALL_HINT, JOBS, ROOT, WEB_DIR, BuildError, Job, graphify_command, rmtree, start_job, \
@@ -403,6 +404,9 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == "/api/pitch":
             self._pitch(body)
             return
+        if self.path == "/api/cover":
+            self._cover(body)
+            return
         if self.path != "/api/build":
             self._json({"error": "Not found."}, 404)
             return
@@ -446,6 +450,21 @@ class Handler(SimpleHTTPRequestHandler):
         fingerprint = json.dumps([profile, sorted(clips)], sort_keys=True)
         job = start_job(("pitch", str(event["id"]), fingerprint), lambda job: gigs.pitch(job, event, profile, clips))
         self._json({"job": job.id})
+
+    def _cover(self, body: dict) -> None:
+        """Cover art for a repo's clip in a genre, painted by Muse Image (cached after the first time)."""
+        repo, genre = str(body.get("repo") or "")[:200], str(body.get("genre") or "")
+        try:
+            image = cover.paint(repo, genre)
+        except BuildError as exc:
+            self._json({"error": str(exc)}, 400 if genre not in cover.LOOKS else 502)
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", cover.mime(image))
+        self.send_header("Content-Length", str(len(image)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(image)
 
     def _voice(self) -> None:
         """A push-to-talk recording, written down by Muse Voice Transcribe."""

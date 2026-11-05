@@ -128,6 +128,7 @@
           <label>Email <textarea id="draft-body" rows="12"></textarea></label>
           <div class="clip">
             <p id="draft-genre" class="clip-genre"></p>
+            <img id="clip-cover" class="clip-cover" alt="The clip's cover art, painted by Meta's Muse Image" title="Cover art by Meta's Muse Image, saved into the clip's MP3" hidden>
             <audio id="clip-player" controls preload="none"></audio>
             <p id="clip-note" class="clip-note"></p>
           </div>
@@ -247,8 +248,9 @@
         <label class="visual-row"><span>Flashing lights</span><input id="flashes" class="switch" type="checkbox"></label>
       </section>
       <section>
-        <h2>Announcer <span>calls in new contenders</span></h2>
-        <label class="visual-row"><span>Voice</span><input id="announcer" class="switch" type="checkbox"></label>
+        <h2>Voice <span>the announcer, and your commands (hold V)</span></h2>
+        <label class="visual-row"><span>Announcer</span><input id="announcer" class="switch" type="checkbox"></label>
+        <label class="visual-row mic-row" for="mic-pick"><span>Microphone</span><select id="mic-pick"></select></label>
       </section>
       <button id="reset-mix" class="ghost" type="button">Back to the suggested mix</button>
     </aside>

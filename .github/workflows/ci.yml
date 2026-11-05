@@ -23,4 +23,21 @@ jobs:
       - name: Every script parses
         run: for f in web/*.js; do node --check "$f"; done
       - name: Song listener benchmark (tempo, bar lines, key)
-        run: node tests/listener-benchmark.mjs
+        run: node benchmarks/listener.mjs
+
+  docker:
+    # The judges' path: the image builds, starts, serves the page and answers the health check.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t djrepo .
+      - name: Start it and check it's serving
+        run: |
+          docker run -d --name djrepo -p 127.0.0.1:8777:8777 djrepo
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8777/ -o /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:8777/ | grep -q "<title>"
+          curl -sf http://127.0.0.1:8777/api/health | tee /dev/stderr | grep -q '"graphify": true'
+      - name: Its logs, if anything failed
+        if: failure()
+        run: docker logs djrepo

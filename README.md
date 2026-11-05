@@ -5,7 +5,11 @@
 **Your GitHub repo, played as a live EDM set with a light show.**<br>
 Battle two repos, or your code against a song. Bring in challengers mid-set. Then let Meta's Muse Spark find you a real gig.
 
-[![Built with Meta Muse Spark and Muse Voice](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark%20%C2%B7%20Muse%20Voice-0866FF)](#built-with-meta)
+**Voice, Speech & Audio AI** · built for the Meta Global AI Hackathon 2026<br>
+Speech in (Muse Voice Transcribe) · song listening (tempo, key, bar lines) · synthesised music and a spoken announcer out
+
+[![Category: Voice, Speech & Audio AI](https://img.shields.io/badge/category-Voice%2C%20Speech%20%26%20Audio%20AI-7a3cff)](#audio-ai-end-to-end)
+[![Built with Meta Muse Spark, Muse Voice and Muse Image](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark%20%C2%B7%20Muse%20Voice%20%C2%B7%20Muse%20Image-0866FF)](#built-with-meta)
 [![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)](#built-with-meta)
 [![CI](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml/badge.svg)](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml)
 [![Live demo](https://img.shields.io/badge/live%20demo-no%20install-ff3fa4)](https://electronukem.github.io/DJRepo/)
@@ -23,6 +27,19 @@ writing cold pitches that mostly go unread. DJRepo does that research with Meta'
 the booking contact against real pages, and hands you a pitch in your own voice, with a clip of your
 set attached, in about two minutes. And it makes code something you can hear and see: your commit
 history, played as a set.
+
+## Audio AI, end to end
+
+DJRepo is an audio AI project: sound goes in and sound comes out at every step, and you can run the
+whole set by voice.
+
+| | What DJRepo does | How |
+| --- | --- | --- |
+| **Speech in** | Hold **V** and say "drop it", "bring in facebook react", "switch to techno", "turn it up" or "lights off" | Meta's **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`), push to talk: 71 of 72 commands right in the [voice benchmark](benchmarks/), 0.85 s median, including a quiet laptop mic and the music playing underneath |
+| **Listening** | Drop in any MP3: DJRepo hears its tempo, bar lines, key and sections, draws it as a graph, and battles it | A song listener in a Web Worker: spectral-flux onsets, autocorrelation tempo, a least-squares beat grid, chroma downbeats, key profiles and section clustering. Tempo within 0.001 BPM and bar lines within 12 ms on the [benchmark](#proof-it-works) |
+| **Music out** | Every commit becomes a bar of EDM, beat-matched against the other deck and mixed live | Web Audio synthesis with no samples: every kick, chord and riser is generated |
+| **Speech out** | An announcer calls "A new contender has arrived" and "Meta is cooking" over the set | Speech synthesis, with the music ducked under it |
+| **Audio for the pitch** | A clip of your set, in the genre Muse Spark picked, to attach to a gig pitch, with cover art like a real mix | Rendered offline and encoded to MP3 in the browser; the cover is painted by Meta's **Muse Image** and written into the MP3's tag |
 
 ## Watch it
 
@@ -86,20 +103,23 @@ the light show need no keys. The gig finder needs two ([Keys](#keys)).
 
 ## Built with Meta
 
-DJRepo uses two Meta models through the [Meta Model API](https://dev.meta.ai): **Muse Spark**
-(`muse-spark-1.3`) for the gig finder, and **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) for
-voice commands. Each step uses a different part of the platform:
+DJRepo uses three Meta models through the [Meta Model API](https://dev.meta.ai): **Muse Spark**
+(`muse-spark-1.3`) for the gig finder, **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`) for
+voice commands, and **Muse Image** (`muse-image-1.0`) for the clip's cover art. Each step uses a
+different part of the platform:
 
 | Step | Meta Model API | What it does |
 | --- | --- | --- |
 | **Research** | Muse Spark: Responses API + `web_search` (search grounding), `reasoning.effort: low` | Looks into the venue, the night, the promoter and how they take bookings, with citations |
 | **Facts** | Muse Spark: Chat Completions + strict `json_schema` | Pulls out the room, the night, a current detail a regular would know, the booking contact and the genre that fits |
 | **Write** | Muse Spark: Chat Completions, `reasoning_effort: medium` | Writes 70–130 words in the DJ's own voice, then rewrites once if any template phrase slips in |
+| **Cover** | Muse Image: `images/generations` | Paints the clip's cover in the colours and mood of the genre Muse Spark picked, once per repo and genre |
 | **Voice** | Muse Voice Transcribe: `asr/transcribe`, push to talk | Turns "drop it" or "bring in facebook react" into an action on the decks in about a second |
 
 Then DJRepo renders a clip of your repo's set in the genre Muse Spark picked (a four-bar build-up
-into a sixteen-bar drop, MP3), and **Email them** opens the draft in your own mail app with the clip
-saved to attach.
+into a sixteen-bar drop, MP3), with Muse Image's cover, the title and your DJ name in its tag, so it
+looks like a mix in the promoter's player. **Email them** opens the draft in your own mail app with
+the clip saved to attach.
 
 **Honest by design.** A booking address is only used if it's really on a page DJRepo read. When
 fabric's FAQ listed `events@` for *private hire*, it was ruled out. Names are only used if a source
@@ -233,17 +253,17 @@ The voice is the browser's own speech (Edge's "Natural" voices sound best). Swit
 | Bar-line accuracy | within 12 ms on every benchmark track |
 | Key detection | 3 of 5 exact (60%); 5 of 5 exact or the relative key (100%) |
 | Song analysis time | about 0.5 s per song in the browser, about 1 s in Node |
-| Voice command transcription (Muse Voice) | 4 of 4 spoken test commands correct (100%), 0.7–1.1 s each |
+| Voice commands (Muse Voice Transcribe) | 71 of 72 right (99%) across a clean voice, a quiet mic and music underneath; 0.85 s median, 0.95 s p95 |
 | Pitch draft time (Muse Spark) | 177 s before tuning `reasoning_effort`, 122 s after (31% faster) |
 | Template phrases in final drafts | 0, in every live run checked |
 | Live music while building a repo or rendering a clip | worst scheduler delay 41–114 ms, inside its 250 ms lookahead: no dropouts |
-| Automated tests | 42 passing, plus the listener benchmark, in CI on every push |
+| Automated tests | 65 passing, plus the listener benchmark, in CI on every push |
 
 
 **The song listener**, benchmarked on tracks where the answer is known, each with a trap real songs
 set: a dotted-eighth echo that looks like a faster tempo, two-step drum & bass that looks like half
 time, and silence before the first beat. It runs in CI on every push
-([`tests/listener-benchmark.mjs`](tests/listener-benchmark.mjs)):
+([`benchmarks/listener.mjs`](benchmarks/listener.mjs)):
 
 | Track | Tempo (true → heard) | Bar line off by | Key |
 | --- | --- | --- | --- |
@@ -259,11 +279,22 @@ plays in tune. On full sets DJRepo renders itself (house, techno, drum & bass), 
 tempo within 0.003 BPM, bar lines within 6 ms, and all three keys right. A song takes about half a
 second to analyse.
 
-**Voice commands:** Muse Voice Transcribe wrote down all four spoken test commands correctly ("drop
-it", "bring in Facebook React", "switch to techno", "turn it up"), in about a second each. In Chrome,
-a test microphone said "drop it" and the set built up into a drop.
+**Voice commands** ([`benchmarks/voice.py`](benchmarks/voice.py)): twelve commands, each spoken by
+two voices, through Muse Voice Transcribe exactly as DJRepo sends them, under three conditions. A
+command only counts if the transcript makes the set do the right thing:
 
-**The gig finder, server and voice**, with 42 tests ([`tests/`](tests/)), including:
+| Condition | Right | Median |
+| --- | --- | --- |
+| Clean | 24 of 24 | 0.82 s |
+| Quiet mic (2% volume, turned up the way the browser does) | 24 of 24 | 0.83 s |
+| Music underneath (-12 dB) | 23 of 24 | 0.86 s |
+
+The first run got 62 of 72: Muse Voice writes "supersaw" as "super solid" and "torvalds" as
+"Torvald's", so DJRepo now listens for those. Testing in Chrome also found that the browser's echo
+cancellation took a quiet voice for an echo of the music, so it's off for commands. Details in
+[`benchmarks/`](benchmarks/).
+
+**The gig finder, server and voice**, with 65 tests ([`tests/`](tests/)), including:
 
 - A booking address is used only if it's on a page DJRepo read. A name is used only if a page names
   that person.
@@ -281,13 +312,14 @@ phrases made it into the final drafts.
 ## What it costs to run
 
 The set, the light show, songs and the live demo cost nothing: everything musical runs in your
-browser, and the Ticketmaster Discovery API is free (5,000 calls a day). Only the two Meta models are
+browser, and the Ticketmaster Discovery API is free (5,000 calls a day). Only the three Meta models are
 billed, pay-as-you-go through the [Meta Model API](https://dev.meta.ai/docs/pricing-rate-limits):
 
 | Model | Meta's price | Per use in DJRepo |
 | --- | --- | --- |
 | Muse Spark (`muse-spark-1.3`) | $1.25 per 1M input tokens, $4.25 per 1M output tokens, plus $2.50 per 1,000 web searches | One pitch is three calls (research, facts, writing), four if the writing needs a second pass. We estimate a few cents per pitch, depending on how much the research reads (we haven't metered tokens per pitch). |
 | Muse Voice Transcribe (`muse-voice-transcribe-1.0`) | $0.18 per hour of audio | A 3-second command costs about $0.00015, so 1,000 commands cost about 15 cents. |
+| Muse Image (`muse-image-1.0`) | $0.01 per image | One cover per repo and genre, kept on disk after that: at most five cents for a repo, however many pitches. |
 
 Each pitch is only made when you pick a gig, and repeated picks reuse the draft, so nothing is spent
 in the background.
@@ -310,13 +342,13 @@ If your system asks for reduced motion, they start off, and the camera moves far
 
 ## Keys
 
-The set and the light show need no keys. The gig finder needs two, in a `.env` file next to
-`server.py` (copy [`.env.example`](.env.example)):
+The set and the light show need no keys. The gig finder needs two, in a `.env` file in the top
+folder (copy [`.env.example`](.env.example)):
 
 | Key | What for | Where |
 | --- | --- | --- |
 | `TICKETMASTER_API_KEY` | Real upcoming events | Free, at [developer.ticketmaster.com](https://developer.ticketmaster.com) (Discovery API) |
-| `MODEL_API_KEY` | Muse Spark research and writing, and voice commands | [dev.meta.ai](https://dev.meta.ai) |
+| `MODEL_API_KEY` | Muse Spark research and writing, Muse Image cover art, and voice commands | [dev.meta.ai](https://dev.meta.ai) |
 
 Docker Compose reads `.env` when the container starts; keys are never copied into the image. A draft
 takes two or three minutes (most of it is the web search), and starts the moment you pick a gig, so
@@ -332,24 +364,26 @@ You need Python 3.11+ and git.
 
 The first run creates a `.venv` and installs graphify into it (the PyPI name is `graphifyy`, with two
 y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Options:
-`server.py --port 9000 --max-nodes 800 --host 127.0.0.1 --no-browser`
+`src/server.py --port 9000 --max-nodes 800 --host 127.0.0.1 --no-browser`
 
 ## What's where
 
 | File | What it is |
 | --- | --- |
-| [`server.py`](server.py) | The local server: clones the repo, runs graphify, builds the scene, and serves the API |
-| [`gigs.py`](gigs.py) | The gig finder: Ticketmaster events, Muse Spark research and writing, contact checking |
-| [`common.py`](common.py) | Background jobs, subprocesses, and trimming a graph down to a scene |
+| [`src/server.py`](src/server.py) | The local server: clones the repo, runs graphify, builds the scene, and serves the API |
+| [`src/gigs.py`](src/gigs.py) | The gig finder: Ticketmaster events, Muse Spark research and writing, contact checking |
+| [`src/common.py`](src/common.py) | Background jobs, subprocesses, and trimming a graph down to a scene |
 | [`web/app.js`](web/app.js) | The light show, the HUD, a new contender's entrance, and the link to the control deck |
 | [`web/dj.js`](web/dj.js) | The DJ: a Web Audio sequencer and every synth, drum and effect |
 | [`web/genres.js`](web/genres.js) | The five genres: tempos, patterns and colours |
 | [`web/deck.html`](web/deck.html), [`web/deck.js`](web/deck.js) | The control deck window |
 | [`web/gigs.js`](web/gigs.js), [`web/sample.js`](web/sample.js) | The gig finder screen, and the offline clip renderer |
 | [`web/song.js`](web/song.js), [`web/song-worker.js`](web/song-worker.js) | A song as a deck: decoding it, and the listener that finds its beat, key and shape |
-| [`voice.py`](voice.py), [`web/voice.js`](web/voice.js) | Voice commands: recording, and Muse Voice Transcribe |
+| [`src/voice.py`](src/voice.py), [`web/voice.js`](web/voice.js) | Voice commands: recording, and Muse Voice Transcribe |
+| [`src/cover.py`](src/cover.py) | The clip's cover art, from Muse Image (the browser writes it into the MP3's tag, in [`web/sample.js`](web/sample.js)) |
 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | One-command setup |
-| [`tests/`](tests/) | The gig finder's and server's tests (`python -m pytest`), and the listener benchmark (`node tests/listener-benchmark.mjs`) |
+| [`tests/`](tests/) | The gig finder's, server's and voice tests (`python -m pytest`) |
+| [`benchmarks/`](benchmarks/) | The song listener benchmark (`node benchmarks/listener.mjs`, in CI) and the Muse Voice command benchmark (`python benchmarks/voice.py`) |
 | [`demo/`](demo/), [`.github/workflows/`](.github/workflows/) | The live demo's pre-built repos and demo song, and the CI and Pages workflows |
 
 ## Notes
