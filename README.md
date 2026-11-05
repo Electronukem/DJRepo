@@ -9,9 +9,10 @@ Battle two repos, or your code against a song. Bring in challengers mid-set. The
 [![Search grounding](https://img.shields.io/badge/Meta%20Model%20API-search%20grounding%20%C2%B7%20structured%20output-4d94ff)](#built-with-meta)
 [![CI](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml/badge.svg)](https://github.com/Electronukem/DJRepo/actions/workflows/ci.yml)
 [![Live demo](https://img.shields.io/badge/live%20demo-no%20install-ff3fa4)](https://electronukem.github.io/DJRepo/)
+[![Demo video](https://img.shields.io/badge/demo%20video-YouTube-ff0000)](https://youtu.be/KD7RH4Gqm4Y)
 ![MIT license](https://img.shields.io/badge/license-MIT-3fd2ff)
 
-### [▶ Play the live demo](https://electronukem.github.io/DJRepo/): no install, just turn it up
+### [▶ Play the live demo](https://electronukem.github.io/DJRepo/) · [🎬 Watch the 3-minute demo](https://youtu.be/KD7RH4Gqm4Y)
 
 <img src="docs/screenshots/new-contender.webp" alt="A song called Meta Global AI Hackathon 2026 slams into the set under a full-screen 'A NEW CONTENDER HAS ARRIVED' title card" width="100%">
 
@@ -22,6 +23,13 @@ writing cold pitches that mostly go unread. DJRepo does that research with Meta'
 the booking contact against real pages, and hands you a pitch in your own voice, with a clip of your
 set attached, in about two minutes. And it makes code something you can hear and see: your commit
 history, played as a set.
+
+## Watch it
+
+<a href="https://youtu.be/KD7RH4Gqm4Y"><img src="https://img.youtube.com/vi/KD7RH4Gqm4Y/maxresdefault.jpg" alt="DJRepo demo video on YouTube: a repo battles a song, a voice command drops the set, and Muse Spark drafts a gig pitch" width="100%"></a>
+
+[The 3-minute demo on YouTube](https://youtu.be/KD7RH4Gqm4Y): a repo battling a song, a drop by voice
+with Muse Voice Transcribe, and Muse Spark finding a real gig in Boston and drafting the pitch.
 
 ## Try it
 
