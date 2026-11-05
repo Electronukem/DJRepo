@@ -10,4 +10,4 @@ if [ ! -x .venv/bin/graphify ]; then
   .venv/bin/python -m pip install --disable-pip-version-check -r requirements.txt \
     || { echo "Couldn't install graphify. Check your internet connection and try again."; exit 1; }
 fi
-exec .venv/bin/python server.py "$@"
+exec .venv/bin/python src/server.py "$@"

@@ -338,8 +338,8 @@ If your system asks for reduced motion, they start off, and the camera moves far
 
 ## Keys
 
-The set and the light show need no keys. The gig finder needs two, in a `.env` file next to
-`server.py` (copy [`.env.example`](.env.example)):
+The set and the light show need no keys. The gig finder needs two, in a `.env` file in the top
+folder (copy [`.env.example`](.env.example)):
 
 | Key | What for | Where |
 | --- | --- | --- |
@@ -360,22 +360,22 @@ You need Python 3.11+ and git.
 
 The first run creates a `.venv` and installs graphify into it (the PyPI name is `graphifyy`, with two
 y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Options:
-`server.py --port 9000 --max-nodes 800 --host 127.0.0.1 --no-browser`
+`src/server.py --port 9000 --max-nodes 800 --host 127.0.0.1 --no-browser`
 
 ## What's where
 
 | File | What it is |
 | --- | --- |
-| [`server.py`](server.py) | The local server: clones the repo, runs graphify, builds the scene, and serves the API |
-| [`gigs.py`](gigs.py) | The gig finder: Ticketmaster events, Muse Spark research and writing, contact checking |
-| [`common.py`](common.py) | Background jobs, subprocesses, and trimming a graph down to a scene |
+| [`src/server.py`](src/server.py) | The local server: clones the repo, runs graphify, builds the scene, and serves the API |
+| [`src/gigs.py`](src/gigs.py) | The gig finder: Ticketmaster events, Muse Spark research and writing, contact checking |
+| [`src/common.py`](src/common.py) | Background jobs, subprocesses, and trimming a graph down to a scene |
 | [`web/app.js`](web/app.js) | The light show, the HUD, a new contender's entrance, and the link to the control deck |
 | [`web/dj.js`](web/dj.js) | The DJ: a Web Audio sequencer and every synth, drum and effect |
 | [`web/genres.js`](web/genres.js) | The five genres: tempos, patterns and colours |
 | [`web/deck.html`](web/deck.html), [`web/deck.js`](web/deck.js) | The control deck window |
 | [`web/gigs.js`](web/gigs.js), [`web/sample.js`](web/sample.js) | The gig finder screen, and the offline clip renderer |
 | [`web/song.js`](web/song.js), [`web/song-worker.js`](web/song-worker.js) | A song as a deck: decoding it, and the listener that finds its beat, key and shape |
-| [`voice.py`](voice.py), [`web/voice.js`](web/voice.js) | Voice commands: recording, and Muse Voice Transcribe |
+| [`src/voice.py`](src/voice.py), [`web/voice.js`](web/voice.js) | Voice commands: recording, and Muse Voice Transcribe |
 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | One-command setup |
 | [`tests/`](tests/) | The gig finder's, server's and voice tests (`python -m pytest`) |
 | [`benchmarks/`](benchmarks/) | The song listener benchmark (`node benchmarks/listener.mjs`, in CI) and the Muse Voice command benchmark (`python benchmarks/voice.py`) |
