@@ -23,4 +23,4 @@ jobs:
       - name: Every script parses
         run: for f in web/*.js; do node --check "$f"; done
       - name: Song listener benchmark (tempo, bar lines, key)
-        run: node tests/listener-benchmark.mjs
+        run: node benchmarks/listener.mjs

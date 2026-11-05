@@ -2398,6 +2398,9 @@ function hearCommand(text) {
 
 const SPOKEN_GENRES = [['drum and bass', 'dnb'], ['drum n bass', 'dnb'], ['drum & bass', 'dnb'], ['dnb', 'dnb'], ['jungle', 'dnb'],
   ['big room', 'bigroom'], ['bigroom', 'bigroom'], ['techno', 'techno'], ['trance', 'trance'], ['house', 'house']];
+// Lead names the way Muse Voice writes them down: "supersaw" comes back as "super solid" (benchmarks/voice.py).
+const SPOKEN_LEADS = [['super saw', 'supersaw'], ['supersolid', 'supersaw'], ['super solid', 'supersaw'], ['8 bit', 'chip'],
+  ['eight bit', 'chip']];
 
 // What a DJ might shout at the decks, and what it does. Returns what was done, for the bubble.
 function runVoice(text) {
@@ -2439,7 +2442,9 @@ function runVoice(text) {
     applyGenre(genre[1], deck);
     return `${GENRES[genre[1]].name}${world.battle ? ` on ${world.graphs[deck].short}` : ''}`;
   }
-  const lead = Object.entries(LEADS).find(([id, l]) => said.includes(` ${l.name.toLowerCase()} `) || said.includes(` ${id} `));
+  const alias = SPOKEN_LEADS.find(([words]) => said.includes(` ${words} `));
+  const lead = alias ? [alias[1], LEADS[alias[1]]]
+    : Object.entries(LEADS).find(([id, l]) => said.includes(` ${l.name.toLowerCase()} `) || said.includes(` ${id} `));
   if (lead) {
     applyLead(lead[0]);
     return `lead: ${lead[1].name}`;
@@ -2457,12 +2462,15 @@ function runVoice(text) {
 
 // "facebook react" → facebook/react; "facebook research slash segment anything" works too.
 function spokenRepo(words) {
-  const w = words.replace(/\s+slash\s+/g, '/').replace(/\s+dash\s+/g, '-').replace(/\s+dot\s+/g, '.').trim();
+  const w = words.replace(/['’]/g, '')  // "torvald's linux" is torvalds/linux
+    .replace(/\s+slash\s+/g, '/').replace(/\s+dash\s+/g, '-').replace(/\s+dot\s+/g, '.').trim();
   if (w.includes('/')) {
     const [owner, ...rest] = w.split('/');
     return `${owner.replace(/\s+/g, '')}/${rest.join('/').trim().replace(/\s+/g, '-')}`;
   }
-  const parts = w.split(/\s+/).filter(Boolean);
+  let parts = w.split(/\s+/).filter(Boolean);
+  // A word Muse Voice wrote twice ("facebook facebook react"); a repo named for its owner ("neovim neovim") stays.
+  if (parts.length >= 3) parts = parts.filter((part, i) => part !== parts[i - 1]);
   return parts.length >= 2 ? `${parts[0]}/${parts.slice(1).join('-')}` : null;
 }
 

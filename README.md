@@ -35,7 +35,7 @@ whole set by voice.
 
 | | What DJRepo does | How |
 | --- | --- | --- |
-| **Speech in** | Hold **V** and say "drop it", "bring in facebook react", "switch to techno", "turn it up" or "lights off" | Meta's **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`), push to talk, about a second per command, even from a quiet laptop mic with the music playing |
+| **Speech in** | Hold **V** and say "drop it", "bring in facebook react", "switch to techno", "turn it up" or "lights off" | Meta's **Muse Voice Transcribe** (`muse-voice-transcribe-1.0`), push to talk: 71 of 72 commands right in the [voice benchmark](benchmarks/), 0.85 s median, including a quiet laptop mic and the music playing underneath |
 | **Listening** | Drop in any MP3: DJRepo hears its tempo, bar lines, key and sections, draws it as a graph, and battles it | A song listener in a Web Worker: spectral-flux onsets, autocorrelation tempo, a least-squares beat grid, chroma downbeats, key profiles and section clustering. Tempo within 0.001 BPM and bar lines within 12 ms on the [benchmark](#proof-it-works) |
 | **Music out** | Every commit becomes a bar of EDM, beat-matched against the other deck and mixed live | Web Audio synthesis with no samples: every kick, chord and riser is generated |
 | **Speech out** | An announcer calls "A new contender has arrived" and "Meta is cooking" over the set | Speech synthesis, with the music ducked under it |
@@ -250,17 +250,17 @@ The voice is the browser's own speech (Edge's "Natural" voices sound best). Swit
 | Bar-line accuracy | within 12 ms on every benchmark track |
 | Key detection | 3 of 5 exact (60%); 5 of 5 exact or the relative key (100%) |
 | Song analysis time | about 0.5 s per song in the browser, about 1 s in Node |
-| Voice command transcription (Muse Voice) | 4 of 4 spoken test commands correct (100%), 0.7–1.1 s each |
+| Voice commands (Muse Voice Transcribe) | 71 of 72 right (99%) across a clean voice, a quiet mic and music underneath; 0.85 s median, 0.95 s p95 |
 | Pitch draft time (Muse Spark) | 177 s before tuning `reasoning_effort`, 122 s after (31% faster) |
 | Template phrases in final drafts | 0, in every live run checked |
 | Live music while building a repo or rendering a clip | worst scheduler delay 41–114 ms, inside its 250 ms lookahead: no dropouts |
-| Automated tests | 42 passing, plus the listener benchmark, in CI on every push |
+| Automated tests | 60 passing, plus the listener benchmark, in CI on every push |
 
 
 **The song listener**, benchmarked on tracks where the answer is known, each with a trap real songs
 set: a dotted-eighth echo that looks like a faster tempo, two-step drum & bass that looks like half
 time, and silence before the first beat. It runs in CI on every push
-([`tests/listener-benchmark.mjs`](tests/listener-benchmark.mjs)):
+([`benchmarks/listener.mjs`](benchmarks/listener.mjs)):
 
 | Track | Tempo (true → heard) | Bar line off by | Key |
 | --- | --- | --- | --- |
@@ -276,11 +276,22 @@ plays in tune. On full sets DJRepo renders itself (house, techno, drum & bass), 
 tempo within 0.003 BPM, bar lines within 6 ms, and all three keys right. A song takes about half a
 second to analyse.
 
-**Voice commands:** Muse Voice Transcribe wrote down all four spoken test commands correctly ("drop
-it", "bring in Facebook React", "switch to techno", "turn it up"), in about a second each. In Chrome,
-a test microphone said "drop it" and the set built up into a drop.
+**Voice commands** ([`benchmarks/voice.py`](benchmarks/voice.py)): twelve commands, each spoken by
+two voices, through Muse Voice Transcribe exactly as DJRepo sends them, under three conditions. A
+command only counts if the transcript makes the set do the right thing:
 
-**The gig finder, server and voice**, with 42 tests ([`tests/`](tests/)), including:
+| Condition | Right | Median |
+| --- | --- | --- |
+| Clean | 24 of 24 | 0.82 s |
+| Quiet mic (2% volume, turned up the way the browser does) | 24 of 24 | 0.83 s |
+| Music underneath (-12 dB) | 23 of 24 | 0.86 s |
+
+The first run got 62 of 72: Muse Voice writes "supersaw" as "super solid" and "torvalds" as
+"Torvald's", so DJRepo now listens for those. Testing in Chrome also found that the browser's echo
+cancellation took a quiet voice for an echo of the music, so it's off for commands. Details in
+[`benchmarks/`](benchmarks/).
+
+**The gig finder, server and voice**, with 60 tests ([`tests/`](tests/)), including:
 
 - A booking address is used only if it's on a page DJRepo read. A name is used only if a page names
   that person.
@@ -366,7 +377,8 @@ y's), which takes a minute. A browser tab opens at http://127.0.0.1:8777. Option
 | [`web/song.js`](web/song.js), [`web/song-worker.js`](web/song-worker.js) | A song as a deck: decoding it, and the listener that finds its beat, key and shape |
 | [`voice.py`](voice.py), [`web/voice.js`](web/voice.js) | Voice commands: recording, and Muse Voice Transcribe |
 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) | One-command setup |
-| [`tests/`](tests/) | The gig finder's and server's tests (`python -m pytest`), and the listener benchmark (`node tests/listener-benchmark.mjs`) |
+| [`tests/`](tests/) | The gig finder's, server's and voice tests (`python -m pytest`) |
+| [`benchmarks/`](benchmarks/) | The song listener benchmark (`node benchmarks/listener.mjs`, in CI) and the Muse Voice command benchmark (`python benchmarks/voice.py`) |
 | [`demo/`](demo/), [`.github/workflows/`](.github/workflows/) | The live demo's pre-built repos and demo song, and the CI and Pages workflows |
 
 ## Notes

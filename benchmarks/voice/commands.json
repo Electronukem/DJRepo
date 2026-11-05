@@ -1,0 +1,14 @@
+[
+  { "id": "drop", "say": "Drop it!", "does": "drop" },
+  { "id": "react", "say": "Bring in facebook react", "does": "bring facebook/react" },
+  { "id": "linux", "say": "Bring in torvalds linux", "does": "bring torvalds/linux" },
+  { "id": "techno", "say": "Switch to techno", "does": "genre techno" },
+  { "id": "dnb", "say": "Drum and bass", "does": "genre dnb" },
+  { "id": "trance", "say": "Play some trance", "does": "genre trance" },
+  { "id": "louder", "say": "Turn it up", "does": "louder" },
+  { "id": "quieter", "say": "Turn it down", "does": "quieter" },
+  { "id": "mute", "say": "Mute it", "does": "mute" },
+  { "id": "back", "say": "Bring it back", "does": "unmute" },
+  { "id": "lights", "say": "Lights off", "does": "lights off" },
+  { "id": "lead", "say": "Supersaw lead", "does": "lead supersaw" }
+]
